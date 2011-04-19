@@ -1,59 +1,17 @@
 -------------------------------------------------------------------
-Mon Apr 18 09:16:36 CEST 2011 - jsuchome@suse.cz
+Tue Apr 19 11:24:05 CEST 2011 - jsuchome@suse.cz
 
+- initial version for SP2, based on Factory version 2.21.4
 - removed YCP code for Tree recursive selection, widget can do it
   itself now (bnc#686639) 
-- 2.21.4
-
--------------------------------------------------------------------
-Fri Apr 15 11:35:28 CEST 2011 - jsuchome@suse.cz
-
 - return map structures from agent, to speed up building tree
   content (bnc#686639)
 - solve restoring directories (bnc#686619)
-- 2.21.3 
-
--------------------------------------------------------------------
-Thu Mar 24 13:21:37 CET 2011 - jsuchome@suse.cz
-
 - added agent documentation 
-- 2.21.2
-
--------------------------------------------------------------------
-Wed Mar 23 11:48:04 CET 2011 - jsuchome@suse.cz
-
 - license update
-- 2.21.1 
-
--------------------------------------------------------------------
-Mon Mar  7 08:26:14 CET 2011 - jsuchome@suse.cz
-
-- first release for Factory
-- 2.21.0 
-
--------------------------------------------------------------------
-Thu Mar  3 15:03:55 CET 2011 - jsuchome@suse.cz
-
 - check selected file mode and ownership
-
--------------------------------------------------------------------
-Mon Feb 28 10:37:40 CET 2011 - jsuchome@suse.cz
-
 - added option to compare with arbitrary snapshot 
-
--------------------------------------------------------------------
-Thu Feb 24 14:37:00 CET 2011 - jsuchome@suse.cz
-
-- tree handling in YCP
 - added restore function
 - show 3 possible ways to diff
-
--------------------------------------------------------------------
-Wed Feb  2 15:55:03 CET 2011 - jsuchome@suse.cz
-
 - added scr agent to access snapper library 
-
--------------------------------------------------------------------
-Mon Dec 13 18:51:43 2010 - jsuchome@suse.cz
-
-- initial version
+- 2.17.0
