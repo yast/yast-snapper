@@ -67,12 +67,16 @@ any SummaryDialog() {
     /* summary dialog caption */
     string caption = _("Snapshots");
 
-    list<map> snapshots	= Snapper::snapshots;
-    integer i	= -1;
+    list<map> snapshots		= Snapper::snapshots;
+    list<string> configs	= Snapper::configs;
 
     list snapshot_items	= [];
 
-    foreach (map s, snapshots, {
+    list get_snapshot_items () {
+
+      integer i	= -1;
+      snapshot_items	= [];
+      foreach (map s, snapshots, {
 	i	= i + 1;
 
 	integer num	= s["num"]:0;
@@ -103,13 +107,23 @@ any SummaryDialog() {
 	{
 	    y2milestone ("skipping pre snapshot: %1", num);
 	}
-    });
+      });
+      return snapshot_items;
+    }
 
     term contents = `VBox (
+	`HBox (
+	    // combo box label
+	    `Label (_("Current Configuration")),
+	    `ComboBox (`id (`configs), `opt (`notify), "", maplist (string config, configs, {
+		return `item (`id (config), config, config == Snapper::current_config);
+	    })),
+	    `HStretch ()
+	),
 	`Table (`id (`snapshots_table), `opt(`notify, `keepSorting), `header (
 		// table header
 		_("ID"), _("Type"), _("Start Date"), _("End Date"), _("Description")),
-		snapshot_items
+		get_snapshot_items ()
 	),
 	`HBox (
 	    `PushButton (`id (`show_c), `opt (`default), _("Show Changes")),
@@ -127,6 +141,7 @@ any SummaryDialog() {
     {
 	UI::ChangeWidget (`id (`show_c), `Enabled, false);
     }
+    UI::ChangeWidget (`id (`configs), `Enabled, size (configs) > 1);
 
     any ret = nil;
     while(true) {
@@ -150,8 +165,25 @@ any SummaryDialog() {
 	    Snapper::selected_snapshot_index	= selected;
             break;
         }
-        else if(ret == `next) {
-	    // TODO check if something needs to be written (description)
+	else if (ret == `configs) {
+	    string config	= (string) UI::QueryWidget (`id (ret), `Value);
+	    if (config != Snapper::current_config)
+	    {
+		Snapper::current_config	= config;
+
+		// busy popup message
+		Popup::ShowFeedback ("", _("Reading list of snapshots..."));
+
+	        Snapper::InitializeSnapper (config);
+	        Snapper::ReadSnapshots ();
+		snapshots		= Snapper::snapshots;
+		Popup::ClearFeedback ();
+
+		UI::ChangeWidget (`id (`snapshots_table), `Items, get_snapshot_items ());
+		continue;
+	    }
+	}
+        else if (ret == `next) {
             break;
         }
         else {
@@ -225,7 +257,7 @@ any ShowDialog () {
 	tree_map	= snapshot["tree_map"]:$[];
     }
     // full paths of files marked as modified, mapping to changes string
-    map<string,string> files_index	= $[];
+    map<string,map> files_index	= $[];
     if (!haskey (snapshot, "files_index"))
     {
 	snapshot["files_index"]	= Snapper::ReadModifiedFilesIndex (from, to);
@@ -242,10 +274,10 @@ any ShowDialog () {
     map<string,boolean> selected_items	= $[];
 
     boolean file_was_created (string file) {
-	return (substring (files_index[file]:"", 0, 1) == "+");
+	return (substring (files_index[file,"status"]:"", 0, 1) == "+");
     }
     boolean file_was_removed (string file) {
-	return (substring (files_index[file]:"", 0, 1) == "-");
+	return (substring (files_index[file,"status"]:"", 0, 1) == "-");
     }
 
     // go through the map defining filesystem tree and create the widget items

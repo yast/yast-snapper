@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Sep 21 16:07:48 CEST 2011 - jsuchome@suse.cz
+
+- support more snapper configurations (bnc#719482)
+- 2.17.5 
+
+-------------------------------------------------------------------
 Tue Aug 30 11:40:52 CEST 2011 - jsuchome@suse.cz
 
 - added icon (bnc#711193)

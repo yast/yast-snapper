@@ -18,13 +18,13 @@ using namespace snapper;
 /*
  * search the map for value of given key; both key and value have to be strings
  */
-string SnapperAgent::getValue (const YCPMap map, const string key)
+string SnapperAgent::getValue (const YCPMap map, const string key, string deflt)
 {
     if (!map->value(YCPString(key)).isNull()
 	&& map->value(YCPString(key))->isString())
 	return map->value(YCPString(key))->asString()->value();
     else
-	return "";
+	return deflt;
 }
 
 /**
@@ -132,14 +132,14 @@ make_ycpmap(const Tree& tree)
  */
 YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
 
-    y2debug ("path in Read: '%s'.", path->toString().c_str());
+    y2internal ("path in Read: '%s'.", path->toString().c_str());
     YCPValue ret = YCPVoid();
 
     YCPMap argmap;
     if (!arg.isNull() && arg->isMap())
     	argmap = arg->asMap();
 
-    if (!snapper_initialized && PC(0) != "error") {
+    if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs") {
 	y2error ("snapper not initialized: use Execute (.snapper) first!");
 	snapper_error = "not_initialized";
 	return YCPVoid();
@@ -147,6 +147,24 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	
     if (path->length() == 1) {
 
+	if (PC(0) == "configs") {
+	    YCPList retlist;
+
+	    try {
+		list<ConfigInfo> configs = Snapper::getConfigs();
+		for (list<ConfigInfo>::const_iterator it = configs.begin(); it != configs.end(); ++it)
+		{
+		    retlist->add (YCPString (it->config_name));
+		}
+	    }
+	    catch (const ListConfigsFailedException& e)
+	    {
+		y2error ("sysconfig file not found.");
+		snapper_error	= "sysconfig_not_found";
+		return YCPVoid();
+	    }
+	    return retlist;
+	}
 	/**
 	 * Read (.snapper.error) -> returns last error message
 	 */
@@ -201,7 +219,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 		    s->add (YCPString ("pre_num"), YCPInteger (it->getPreNum()));
 		}
 
-		y2debug ("snapshot %s", s.toString().c_str());
+		y2internal ("snapshot %s", s.toString().c_str());
 		retlist->add (s);
 	    }
 	    return retlist;
@@ -242,7 +260,10 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
 	    for (Files::const_iterator it = files.begin(); it != files.end(); ++it)
 	    {
-		retmap->add (YCPString (it->getName()), YCPString (statusToString (it->getPreToPostStatus())));
+		YCPMap file_map;
+		file_map->add (YCPString ("status"), YCPString (statusToString (it->getPreToPostStatus())));
+		file_map->add (YCPString ("full_path"), YCPString (it->getAbsolutePath (LOC_SYSTEM)));
+		retmap->add (YCPString (it->getName()), file_map);
 	    }
 	    return retmap;
 	}
@@ -294,7 +315,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 YCPBoolean SnapperAgent::Write(const YCPPath &path, const YCPValue& arg,
        const YCPValue& arg2)
 {
-    y2debug ("path in Write: '%s'.", path->toString().c_str());
+    y2internal ("path in Write: '%s'.", path->toString().c_str());
 
     YCPBoolean ret = YCPBoolean(true);
     return ret;
@@ -306,7 +327,7 @@ YCPBoolean SnapperAgent::Write(const YCPPath &path, const YCPValue& arg,
 YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	const YCPValue& arg2)
 {
-    y2debug ("path in Execute: '%s'.", path->toString().c_str());
+    y2internal ("path in Execute: '%s'.", path->toString().c_str());
     YCPValue ret = YCPBoolean (true);
 
     YCPMap argmap;
@@ -317,9 +338,17 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
      * Execute (.snapper) call: Initialize snapper object
      */
     if (path->length() == 0) {
+    
+	snapper_initialized	= false;
+	if (sh)
+	{
+	    y2milestone ("deleting existing snapper object");
+	    deleteSnapper(sh);
+	}
 
+	string config_name = getValue (argmap, "config", "root");
 	try {
-	    sh = createSnapper();
+	    sh = createSnapper (config_name);
 	}
 	catch (const ConfigNotFoundException& e)
 	{
@@ -363,7 +392,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 		if (selected.value(i)->isString())
 		{
 		    string name = selected->value(i)->asString()->value();
-		    y2debug ("file to rollback: %s", name.c_str());
+		    y2internal ("file to rollback: %s", name.c_str());
 		    Files::iterator it = files.find(name);
 		    if (it == files.end())
 		    {
