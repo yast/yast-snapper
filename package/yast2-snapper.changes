@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Oct  7 14:41:26 CEST 2011 - jsuchome@suse.cz
+
+- removed conflicting statusToString
+- 2.17.7 
+
+-------------------------------------------------------------------
 Fri Oct  7 09:07:43 CEST 2011 - jsuchome@suse.cz
 
 - show path to current subvolume above filesystem tree (bnc#719482)
