@@ -18,11 +18,11 @@ using namespace snapper;
 /*
  * search the map for value of given key; both key and value have to be strings
  */
-string SnapperAgent::getValue (const YCPMap map, const string key, string deflt)
+string SnapperAgent::getValue (const YCPMap &map, const YCPString &key, const string &deflt)
 {
-    if (!map->value(YCPString(key)).isNull()
-	&& map->value(YCPString(key))->isString())
-	return map->value(YCPString(key))->asString()->value();
+    YCPValue val = map->value(key);
+    if (!val.isNull() && val->isString())
+	return val->asString()->value();
     else
 	return deflt;
 }
@@ -33,15 +33,15 @@ string SnapperAgent::getValue (const YCPMap map, const string key, string deflt)
  * @param key key we are looking for
  * @param deflt the default value to be returned if key is not found
  */
-int SnapperAgent::getIntValue (const YCPMap map, const string key, int deflt)
+int SnapperAgent::getIntValue (const YCPMap &map, const YCPString &key, const int deflt)
 {
-    if (!map->value(YCPString(key)).isNull() && map->value(YCPString(key))->isInteger()) {
-	return map->value(YCPString(key))->asInteger()->value(); 
+    YCPValue val = map->value(key);
+
+    if (!val.isNull() && val->isInteger()) {
+	return val->asInteger()->value();
     }
-    else if (!map->value(YCPString(key)).isNull() &&
-	     map->value(YCPString(key))->isString()) {
-	YCPInteger i (map->value(YCPString(key))->asString()->value().c_str());
-	return i->value();
+    else if (!val.isNull() && val->isString()) {
+	return YCPInteger (val->asString()->value().c_str())->value ();
     }
     return deflt;
 }
@@ -50,10 +50,11 @@ int SnapperAgent::getIntValue (const YCPMap map, const string key, int deflt)
  * Search the map for value of given key;
  * key is string and value is YCPList
  */
-YCPList SnapperAgent::getListValue (const YCPMap map, const string key)
+YCPList SnapperAgent::getListValue (const YCPMap &map, const YCPString &key)
 {
-    if (!map->value(YCPString(key)).isNull() && map->value(YCPString(key))->isList())
-	return map->value(YCPString(key))->asList();
+    YCPValue val = map->value(key);
+    if (!val.isNull() && val->isList())
+	return val->asList();
     else
 	return YCPList();
 }
@@ -110,7 +111,7 @@ make_ycpmap(const Tree& tree)
  */
 YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
 
-    y2internal ("path in Read: '%s'.", path->toString().c_str());
+    y2debug ("path in Read: '%s'.", path->toString().c_str());
     YCPValue ret = YCPVoid();
 
     YCPMap argmap;
@@ -155,7 +156,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	 * Read (.snapper.path, $[ "num" : num]) -> returns the path to directory with given snapshot
 	 */
 	if (PC(0) == "path") {
-	    unsigned int num    = getIntValue (argmap, "num", 0);
+	    unsigned int num    = getIntValue (argmap, YCPString ("num"), 0);
 	    const Snapshots& snapshots = sh->getSnapshots();
 	    Snapshots::const_iterator snap = snapshots.find(num);
 	    if (snap == snapshots.end())
@@ -197,14 +198,14 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 		    s->add (YCPString ("pre_num"), YCPInteger (it->getPreNum()));
 		}
 
-		y2internal ("snapshot %s", s.toString().c_str());
+		y2debug ("snapshot %s", s.toString().c_str());
 		retlist->add (s);
 	    }
 	    return retlist;
 	}
 
-	unsigned int num1	= getIntValue (argmap, "from", 0);
-	unsigned int num2	= getIntValue (argmap, "to", 0);
+	unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
+	unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
 
 	/**
 	 * Read(.snapper.diff_list) -> show difference between snapnots num1 and num2 as list.
@@ -293,7 +294,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 YCPBoolean SnapperAgent::Write(const YCPPath &path, const YCPValue& arg,
        const YCPValue& arg2)
 {
-    y2internal ("path in Write: '%s'.", path->toString().c_str());
+    y2debug ("path in Write: '%s'.", path->toString().c_str());
 
     YCPBoolean ret = YCPBoolean(true);
     return ret;
@@ -305,7 +306,7 @@ YCPBoolean SnapperAgent::Write(const YCPPath &path, const YCPValue& arg,
 YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	const YCPValue& arg2)
 {
-    y2internal ("path in Execute: '%s'.", path->toString().c_str());
+    y2debug ("path in Execute: '%s'.", path->toString().c_str());
     YCPValue ret = YCPBoolean (true);
 
     YCPMap argmap;
@@ -323,8 +324,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	    y2milestone ("deleting existing snapper object");
 	    deleteSnapper(sh);
 	}
-
-	string config_name = getValue (argmap, "config", "root");
+	string config_name = getValue (argmap, YCPString ("config"), "root");
 	try {
 	    sh = createSnapper (config_name);
 	}
@@ -359,18 +359,18 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	 */
 	if (PC(0) == "rollback") {
 
-	    unsigned int num1	= getIntValue (argmap, "from", 0);
-	    unsigned int num2	= getIntValue (argmap, "to", 0);
+	    unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
+	    unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
 	    const Snapshots& snapshots = sh->getSnapshots();
 	    Comparison comparison(sh, snapshots.find(num1), snapshots.find(num2));
 	    Files& files = comparison.getFiles();
 
-	    YCPList selected = getListValue (argmap, "files");
+	    YCPList selected = getListValue (argmap, YCPString ("files"));
 	    for (int i=0; i < selected->size(); i++) {
 		if (selected.value(i)->isString())
 		{
 		    string name = selected->value(i)->asString()->value();
-		    y2internal ("file to rollback: %s", name.c_str());
+		    y2debug ("file to rollback: %s", name.c_str());
 		    Files::iterator it = files.find(name);
 		    if (it == files.end())
 		    {

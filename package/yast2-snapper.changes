@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Wed Oct 12 16:45:12 CEST 2011 - jsuchome@suse.cz
+
+- snaper agent: C++ optimalizations
+- quote strings passed to bash commands
+- added testsuite 
+- escape HTML tags in diff output
+- use fixed font for showing the diff (bnc#723621)
+- 2.17.8
+
+-------------------------------------------------------------------
 Fri Oct  7 14:41:26 CEST 2011 - jsuchome@suse.cz
 
 - removed conflicting statusToString

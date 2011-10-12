@@ -37,6 +37,7 @@ import "Label";
 import "Popup";
 import "Wizard";
 import "Snapper";
+import "String";
 
 include "snapper/helps.ycp";
 
@@ -373,8 +374,10 @@ any ShowDialog () {
 
 	if (haskey (modification, "diff"))
 	{
-	    string diff	= modification["diff"]:"";
+	    string diff	= String::EscapeTags (modification["diff"]:"");
 	    diff	= mergestring (splitstring (diff, "\n"), "<br>");
+	    // show fixed font in diff
+	    diff	= "<tt>" + diff + "</tt>";
 	    content	= add (content, `RichText (`id (`diff), diff));
 	}
 	else
@@ -636,7 +639,7 @@ from snapshot '%2' to current system?", Snapper::GetFileFullPath (current_file),
 	    files = filter (string file, files, {
 		if (haskey (files_index, file))
 		{
-		    to_restore	= add (to_restore, Snapper::GetFileFullPath (file));
+		    to_restore	= add (to_restore, String::EscapeTags (Snapper::GetFileFullPath (file)));
 		    return true;
 		}
 		else
