@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Nov 21 14:55:08 CET 2011 - jsuchome@suse.cz
+
+- there might be other configs than 'root' (bnc#731687)
+- 2.17.11
+
+-------------------------------------------------------------------
 Fri Oct 14 10:08:18 CEST 2011 - jsuchome@suse.cz
 
 - use the <pre> tag for the diff, so spaces are not lost
