@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Nov 24 12:25:52 CET 2011 - jsuchome@suse.cz
+
+- there might be other configs than 'root' (bnc#731687)
+- removed fixed sizes in UI, to prevent breaking Gtk (bnc#731363) 
+- 2.21.16.1
+
+-------------------------------------------------------------------
 Fri Oct 14 10:15:38 CEST 2011 - jsuchome@suse.cz
 
 - use the <pre> tag for the diff, so spaces are not lost
