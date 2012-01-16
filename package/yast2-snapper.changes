@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jan 16 10:45:11 CET 2012 - jsuchome@suse.cz
+
+- when reverting changes to selected snapshot, delete files as well
+  (bnc#741214)
+- 2.17.13 
+
+-------------------------------------------------------------------
 Thu Nov 24 11:52:29 CET 2011 - jsuchome@suse.cz
 
 - removed fixed sizes in UI, to prevent breaking Gtk (bnc#731363)
