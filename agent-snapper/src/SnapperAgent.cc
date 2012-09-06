@@ -59,6 +59,40 @@ YCPList SnapperAgent::getListValue (const YCPMap &map, const YCPString &key)
 	return YCPList();
 }
 
+/**
+ * Search the map for value of given key;
+ * key is string and value is YCPMap
+ */
+YCPMap SnapperAgent::getMapValue (const YCPMap &map, const YCPString &key)
+{
+    YCPValue val = map->value(key);
+    if (!val.isNull() && val->isMap())
+        return val->asMap();
+    else
+        return YCPMap();
+}
+
+YCPMap map2ycpmap (const map<string, string>& userdata)
+{
+    YCPMap m;  
+    for (map<string, string>::const_iterator it = userdata.begin(); it != userdata.end(); ++it)
+    {
+        m->add (YCPString (it->first), YCPString (it->second));
+    }
+    return m;
+}
+
+map<string, string> ycpmap2stringmap (const YCPMap &ycp_map)
+{
+    map<string, string> m; 
+
+    for (YCPMapIterator i = ycp_map->begin(); i != ycp_map->end(); i++) {
+        string key = i.key()->asString()->value();
+        m[key]  = i.value()->asString()->value();
+    }
+    return m;
+}
+
 
 /**
  * Constructor
@@ -68,6 +102,7 @@ SnapperAgent::SnapperAgent() : SCRAgent()
     sh			= NULL;
     snapper_initialized	= false;
     snapper_error	= "";
+
 }
 
 /**
@@ -77,7 +112,8 @@ SnapperAgent::~SnapperAgent()
 {
     if (sh)
     {
-	deleteSnapper(sh);
+	delete sh;
+	sh = 0;
     }
 }
 
@@ -186,17 +222,17 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
 		s->add (YCPString ("num"), YCPInteger (it->getNum()));
 		s->add (YCPString ("date"), YCPInteger (it->getDate()));
+		s->add (YCPString ("description"), YCPString (it->getDescription()));
 
-		if (it->getType() == SINGLE || it->getType() == PRE)
+		if (it->getType() == PRE)
 		{
-		    s->add (YCPString ("description"), YCPString (it->getDescription()));
-		    if (it->getType() == PRE)
-			s->add (YCPString ("post_num"), YCPInteger (snapshots.findPost (it)->getNum ()));
+		    s->add (YCPString ("post_num"), YCPInteger (snapshots.findPost (it)->getNum ()));
 		}
 		else if (it->getType() == POST)
 		{
 		    s->add (YCPString ("pre_num"), YCPInteger (it->getPreNum()));
 		}
+                s->add (YCPString ("userdata"), YCPMap (map2ycpmap (it->getUserdata())));
 
 		y2debug ("snapshot %s", s.toString().c_str());
 		retlist->add (s);
@@ -322,11 +358,13 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	if (sh)
 	{
 	    y2milestone ("deleting existing snapper object");
-	    deleteSnapper(sh);
+	    delete sh;
+	    sh = 0;
 	}
 	string config_name = getValue (argmap, YCPString ("config"), "root");
-	try {
-	    sh = createSnapper (config_name);
+	try
+	{
+	    sh = new Snapper(config_name);
 	}
 	catch (const ConfigNotFoundException& e)
 	{
@@ -354,10 +392,87 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
     if (path->length() == 1) {
 
+	if (PC(0) == "create") {
+
+            string description  = getValue (argmap, YCPString ("description"), "");
+            string cleanup      = getValue (argmap, YCPString ("cleanup"), "");
+            string type         = getValue (argmap, YCPString ("type"), "single");
+            YCPMap userdata     = getMapValue (argmap, YCPString ("userdata"));
+
+            const Snapshots& snapshots          = sh->getSnapshots();
+            Snapshots::iterator snap;
+
+            if (type == "single") {
+                snap    = sh->createSingleSnapshot(description);
+            }
+            else if (type == "pre") {
+                snap    = sh->createPreSnapshot(description);
+            }
+            else if (type == "post") {
+                // check if pre was given!
+                int pre = getIntValue (argmap, YCPString ("pre"), -1);
+                if (pre == -1)
+                {
+                    snapper_error       = "pre_not_given";
+                    return YCPBoolean (false);
+                }
+                else
+                {
+                    Snapshots::const_iterator snap1 = snapshots.find (pre);
+                    if (snap1 == snapshots.end())
+                    {
+                        snapper_error   = "pre_not_found";
+                        return YCPBoolean (false);
+                    }
+                    else
+                    {
+                        snap    = sh->createPostSnapshot(description, snap1);
+                    }
+                }
+            }
+            else {
+                snapper_error   = "wrong_snapshot_type";
+                return YCPBoolean (false);
+            }
+
+            snap->setCleanup (cleanup);
+            snap->setUserdata (ycpmap2stringmap (userdata));
+            snap->flushInfo();
+            return ret;
+        }
+        else if (PC(0) == "modify") {
+
+            int num     = getIntValue (argmap, YCPString ("num"), 0);
+
+            Snapshots& snapshots = sh->getSnapshots();
+            Snapshots::iterator snap = snapshots.find(num);
+            if (snap == snapshots.end())
+            {
+                y2error ("snapshot '%d' not found", num);
+                snapper_error   = "snapshot_not_found";
+                return YCPBoolean (false);
+            }
+
+            if (!argmap->value(YCPString ("description")).isNull())
+//            if (argmap->hasKey(YCPString ("description")))
+            {
+                snap->setDescription (getValue (argmap, YCPString ("description"), ""));
+            }
+            if (!argmap->value(YCPString ("cleanup")).isNull())
+            {
+                snap->setCleanup (getValue (argmap, YCPString ("cleanup"), ""));
+            }
+            if (!argmap->value(YCPString ("userdata")).isNull())
+            {
+                snap->setUserdata (ycpmap2stringmap (getMapValue (argmap, YCPString ("userdata"))));
+            }
+            snap->flushInfo();
+            return ret;
+        }
 	/**
 	 * Rollback the list of given files from snapshot num1 to num2 (system by default)
 	 */
-	if (PC(0) == "rollback") {
+        else if (PC(0) == "rollback") {
 
 	    unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
 	    unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
