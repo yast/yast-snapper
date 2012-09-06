@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Sep  5 12:50:24 CEST 2012 - jsuchome@suse.cz
+
+- added support for creating and modifying snapshots (fate#313041)
+- show and enable editing of userdata
+- 2.17.14 
+
+-------------------------------------------------------------------
 Mon Jan 16 10:45:11 CET 2012 - jsuchome@suse.cz
 
 - when reverting changes to selected snapshot, delete files as well

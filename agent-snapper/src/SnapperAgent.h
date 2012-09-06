@@ -14,7 +14,6 @@
 #include <scr/SCRAgent.h>
 
 #include <snapper/Snapper.h>
-#include <snapper/Factory.h>
 #include <snapper/Snapshot.h>
 #include <snapper/Comparison.h>
 #include <snapper/File.h>
@@ -52,6 +51,12 @@ private:
      * key is string and value is YCPList
      */
     YCPList getListValue (const YCPMap &map, const YCPString &key);
+
+    /**
+     * Search the map for value of given key;
+     * key is string and value is YCPMap
+     */
+    YCPMap getMapValue (const YCPMap &map, const YCPString &key);
 
 public:
     /**
