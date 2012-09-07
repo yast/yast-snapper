@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------------------
- * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ * Copyright (c) 2006-2012 Novell, Inc. All Rights Reserved.
  *
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -243,6 +243,61 @@ global boolean InitializeSnapper (string config) {
     }
     return init;
 
+}
+
+/**
+ * Modify existing snapshot
+ * Return true on success
+ */
+global boolean ModifySnapshot (map args) {
+
+    boolean success     = (boolean) SCR::Execute (.snapper.modify, args);
+    if (!success)
+    {
+        map err_map     = LastSnapperErrorMap ();
+        string type     = err_map["type"]:"";
+        string details  = _("Reason not known.");
+
+        y2warning ("modification failed with '%1'", err_map);
+        // error popup
+        Report::Error (sformat (_("Failed to modify snapshot:
+%1"), details));
+    }
+    return success;
+}
+
+/**
+ * Create new snapshot
+ * Return true on success
+ */
+global boolean CreateSnapshot (map args) {
+
+    boolean success     = (boolean) SCR::Execute (.snapper.create, args);
+    if (!success)
+    {
+        map err_map     = LastSnapperErrorMap ();
+        string type     = err_map["type"]:"";
+        string details  = _("Reason not known.");
+
+        if (type == "wrong_snapshot_type")
+        {
+            details     = _("Wrong snapshot type given.");
+        }
+        else if (type == "pre_not_given")
+        {
+            details     = _("'Pre' snapshot was not given.");
+        }
+        else if (type == "pre_not_found")
+        {
+            details     = _("Given 'Pre' snapshot was not found.");
+        }
+
+        y2warning ("creating failed with '%1'", err_map);
+        // error popup
+        Report::Error (sformat (_("Failed to create new snapshot:
+%1"), details));
+    }
+    return success;
 }
 
 /**
