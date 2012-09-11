@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Tue Sep 11 14:22:42 CEST 2012 - jsuchome@suse.cz
+
+- enable deleting snapshots
+- enable editing lonely pre snapshots
+- read, show and edit cleanup algorithm
+- merge proofread texts
+- 2.17.15
+
+-------------------------------------------------------------------
 Wed Sep  5 12:50:24 CEST 2012 - jsuchome@suse.cz
 
 - added support for creating and modifying snapshots (fate#313041)
