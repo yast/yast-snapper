@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 11 12:15:19 CET 2013 - jsuchome@suse.cz
+
+- libbtrfs-devel is required for build
+- 2.17.17 
+
+-------------------------------------------------------------------
 Mon Nov 19 11:33:41 CET 2012 - aschnell@suse.de
 
 - added binding for Snapper::createConfig
