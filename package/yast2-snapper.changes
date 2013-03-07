@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Mar  7 11:44:04 CET 2013 - jsuchome@suse.cz
+
+- mark visible strings for translations (bnc#807719)
+- 2.17.18
+
+-------------------------------------------------------------------
 Mon Feb 11 12:15:19 CET 2013 - jsuchome@suse.cz
 
 - libbtrfs-devel is required for build
