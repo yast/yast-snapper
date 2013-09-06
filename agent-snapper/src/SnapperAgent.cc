@@ -13,21 +13,8 @@
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <asm/types.h>
 
 #define PC(n)       (path->component_str(n))
-
-#define BTRFS_PATH_NAME_MAX 4087
-#define BTRFS_IOCTL_MAGIC 0x94
-#define BTRFS_IOC_SUBVOL_CREATE _IOW(BTRFS_IOCTL_MAGIC, 14, struct btrfs_ioctl_vol_args)
-#define BTRFS_IOC_SNAP_DESTROY _IOW(BTRFS_IOCTL_MAGIC, 15, struct btrfs_ioctl_vol_args)
-
-struct btrfs_ioctl_vol_args
-{
-  __s64 fd;
-  char name[BTRFS_PATH_NAME_MAX + 1];
-};
-
 
 using namespace snapper;
 

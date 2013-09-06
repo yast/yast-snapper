@@ -19,6 +19,8 @@
 #include <snapper/File.h>
 #include <snapper/Logger.h>
 
+#include <btrfs/ioctl.h>
+
 /**
  * @short An interface class between YaST2 and Snapper Agent
  */
