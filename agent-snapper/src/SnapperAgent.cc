@@ -11,7 +11,22 @@
 #include <ctype.h>
 #include <boost/algorithm/string.hpp>
 
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <asm/types.h>
+
 #define PC(n)       (path->component_str(n))
+
+#define BTRFS_PATH_NAME_MAX 4087
+#define BTRFS_IOCTL_MAGIC 0x94
+#define BTRFS_IOC_SUBVOL_CREATE _IOW(BTRFS_IOCTL_MAGIC, 14, struct btrfs_ioctl_vol_args)
+
+struct btrfs_ioctl_vol_args
+{
+  __s64 fd;
+  char name[BTRFS_PATH_NAME_MAX + 1];
+};
+
 
 using namespace snapper;
 
@@ -435,6 +450,32 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 		return YCPBoolean (false);
 	    }
 
+	    return ret;
+	}
+        else if (PC(0) == "create_subvolume")
+	{
+	    string path = getValue(argmap, YCPString("path"), ""); // must be provided!
+
+            // find a directory one level up
+            int idx = path.rfind('/');
+            string updir        = path.substr(0, idx);
+            string name         = path.substr(idx + 1);
+
+            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC);
+            if (dirfd < 0)
+            {
+                y2error("open failed path: %s", updir.c_str());
+                return YCPBoolean (false);
+            }
+
+            // copied from Btrfs::create_subvolume
+            struct btrfs_ioctl_vol_args args;
+            memset(&args, 0, sizeof(args));
+            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
+
+            int ioctl_ret       = ioctl(dirfd, BTRFS_IOC_SUBVOL_CREATE, &args);
+            close(dirfd);
+            ret = YCPBoolean (ioctl_ret == 0);
 	    return ret;
 	}
 	else if (PC(0) == "create") {
