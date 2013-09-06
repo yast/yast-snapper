@@ -115,6 +115,38 @@ log_query(LogLevel level, const string& component)
     return should_be_logged(ln[level], component);
 }
 
+// call ioctl to create or delete specific btrfs subvolume
+YCPBoolean btrfs_ioctl_call(string path, int request)
+{
+
+    if (path == "") {
+        y2error ("'path' attribute missing!");
+        return YCPBoolean (false);
+    }
+
+    // find a directory one level up
+    // (FIXME check for path ending with /)
+    int idx = path.rfind('/');
+    string updir        = path.substr(0, idx);
+    string name         = path.substr(idx + 1);
+
+    int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
+    if (dirfd < 0)
+    {
+        y2error("opening directory '%s' failed", updir.c_str());
+        return YCPBoolean (false);
+    }
+         
+    struct btrfs_ioctl_vol_args args;
+    memset(&args, 0, sizeof(args));
+    strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
+
+    ret = YCPBoolean (ioctl(dirfd, request, &args) == 0);
+
+    close(dirfd);
+
+    return ret;
+}
 
 /**
  * Constructor
@@ -444,7 +476,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
             string name = getValue(argmap, YCPString("config_name"), "");
 
-            if (path == "") {
+            if (name == "") {
               y2error ("'config_name' attribute missing!");
               return YCPBoolean (false);
             }
@@ -591,63 +623,19 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
         // create new subvolume, argument 'path' must be provided
         if (PC(1) == "create")
         {
-            string path = getValue(argmap, YCPString("path"), "");
-
-            if (path == "") {
-              y2error ("'path' attribute missing!");
-              return YCPBoolean (false);
-            }
-
-            // find a directory one level up
-            int idx = path.rfind('/');
-            string updir        = path.substr(0, idx);
-            string name         = path.substr(idx + 1);
-
-            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
-            if (dirfd < 0)
-            {
-              y2error("opening directory '%s' failed", updir.c_str());
-              return YCPBoolean (false);
-            }
-
-            // copied from Btrfs::create_subvolume
-            struct btrfs_ioctl_vol_args args;
-            memset(&args, 0, sizeof(args));
-            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
-
-            ret = YCPBoolean (ioctl(dirfd, BTRFS_IOC_SUBVOL_CREATE, &args) == 0);
-            close(dirfd);
-            return ret;
+            return btrfs_ioctl_call(
+                getValue(argmap, YCPString("path"), "")
+                BTRFS_IOC_SUBVOL_CREATE
+            );
         }
         else if (PC(1) == "delete") {
-            string path = getValue(argmap, YCPString("path"), "");
 
-            if (path == "") {
-              y2error ("'path' attribute missing!");
-              return YCPBoolean (false);
-            }
-            //
-            // find a directory one level up
-            int idx = path.rfind('/');
-            string updir        = path.substr(0, idx);
-            string name         = path.substr(idx + 1);
-
-            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
-            if (dirfd < 0)
-            {
-              y2error("opening directory '%s' failed", updir.c_str());
-              return YCPBoolean (false);
-            }
-
-            struct btrfs_ioctl_vol_args args;
-            memset(&args, 0, sizeof(args));
-            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
-
-            ret = YCPBoolean (ioctl(dirfd, BTRFS_IOC_SNAP_DESTROY, &args) == 0);
-            close(dirfd);
-            return ret;
+            return btrfs_ioctl_call(
+                getValue(argmap, YCPString("path"), "")
+                BTRFS_IOC_SNAP_DESTROY
+                BTRFS_IOC_SUBVOL_CREATE
+            );
         }
-
     }
     else {
 	y2error("Wrong path '%s' in Execute().", path->toString().c_str());
