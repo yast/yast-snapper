@@ -20,6 +20,7 @@
 #define BTRFS_PATH_NAME_MAX 4087
 #define BTRFS_IOCTL_MAGIC 0x94
 #define BTRFS_IOC_SUBVOL_CREATE _IOW(BTRFS_IOCTL_MAGIC, 14, struct btrfs_ioctl_vol_args)
+#define BTRFS_IOC_SNAP_DESTROY _IOW(BTRFS_IOCTL_MAGIC, 15, struct btrfs_ioctl_vol_args)
 
 struct btrfs_ioctl_vol_args
 {
@@ -452,32 +453,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
 	    return ret;
 	}
-        else if (PC(0) == "create_subvolume")
-	{
-	    string path = getValue(argmap, YCPString("path"), ""); // must be provided!
-
-            // find a directory one level up
-            int idx = path.rfind('/');
-            string updir        = path.substr(0, idx);
-            string name         = path.substr(idx + 1);
-
-            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC);
-            if (dirfd < 0)
-            {
-                y2error("open failed path: %s", updir.c_str());
-                return YCPBoolean (false);
-            }
-
-            // copied from Btrfs::create_subvolume
-            struct btrfs_ioctl_vol_args args;
-            memset(&args, 0, sizeof(args));
-            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
-
-            int ioctl_ret       = ioctl(dirfd, BTRFS_IOC_SUBVOL_CREATE, &args);
-            close(dirfd);
-            ret = YCPBoolean (ioctl_ret == 0);
-	    return ret;
-	}
 	else if (PC(0) == "create") {
 
             string description  = getValue (argmap, YCPString ("description"), "");
@@ -602,6 +577,69 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	    }
 	    return ret;
 	}
+
+    }
+    else if (path->length() == 2 && PC(0) == "subvolume") {
+
+        // create new subvolume, argument 'path' must be provided
+        if (PC(1) == "create")
+	{
+	    string path = getValue(argmap, YCPString("path"), "");
+
+            if (path == "") {
+              y2error ("'path' attribute missing!");
+              return YCPBoolean (false);
+            }
+
+            // find a directory one level up
+            int idx = path.rfind('/');
+            string updir        = path.substr(0, idx);
+            string name         = path.substr(idx + 1);
+
+            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
+            if (dirfd < 0)
+            {
+              y2error("opening directory '%s' failed", updir.c_str());
+              return YCPBoolean (false);
+            }
+
+            // copied from Btrfs::create_subvolume
+            struct btrfs_ioctl_vol_args args;
+            memset(&args, 0, sizeof(args));
+            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
+
+            ret = YCPBoolean (ioctl(dirfd, BTRFS_IOC_SUBVOL_CREATE, &args) == 0);
+            close(dirfd);
+            return ret;
+	}
+        else if (PC(1) == "delete") {
+	    string path = getValue(argmap, YCPString("path"), "");
+
+            if (path == "") {
+              y2error ("'path' attribute missing!");
+              return YCPBoolean (false);
+            }
+            //
+            // find a directory one level up
+            int idx = path.rfind('/');
+            string updir        = path.substr(0, idx);
+            string name         = path.substr(idx + 1);
+
+            int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
+            if (dirfd < 0)
+            {
+              y2error("opening directory '%s' failed", updir.c_str());
+              return YCPBoolean (false);
+            }
+
+            struct btrfs_ioctl_vol_args args;
+            memset(&args, 0, sizeof(args));
+            strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
+
+            ret = YCPBoolean (ioctl(dirfd, BTRFS_IOC_SNAP_DESTROY, &args) == 0);
+            close(dirfd);
+            return ret;
+        }
 
     }
     else {
