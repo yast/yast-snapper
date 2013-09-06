@@ -583,8 +583,8 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
         // create new subvolume, argument 'path' must be provided
         if (PC(1) == "create")
-	{
-	    string path = getValue(argmap, YCPString("path"), "");
+        {
+            string path = getValue(argmap, YCPString("path"), "");
 
             if (path == "") {
               y2error ("'path' attribute missing!");
@@ -611,9 +611,9 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
             ret = YCPBoolean (ioctl(dirfd, BTRFS_IOC_SUBVOL_CREATE, &args) == 0);
             close(dirfd);
             return ret;
-	}
+        }
         else if (PC(1) == "delete") {
-	    string path = getValue(argmap, YCPString("path"), "");
+            string path = getValue(argmap, YCPString("path"), "");
 
             if (path == "") {
               y2error ("'path' attribute missing!");
