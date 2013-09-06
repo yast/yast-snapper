@@ -440,6 +440,26 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
 	    return ret;
 	}
+        else if (PC(0) == "delete_config") {
+
+            string name = getValue(argmap, YCPString("config_name"), "");
+
+            if (path == "") {
+              y2error ("'config_name' attribute missing!");
+              return YCPBoolean (false);
+            }
+
+            try
+            {
+              Snapper::deleteConfig(name);
+            }
+            catch (const DeleteConfigFailedException& e)
+            {
+              y2error("deleting config failed (%s).", e.what());
+              return YCPBoolean (false);
+            }
+            return ret;
+        }
 	else if (PC(0) == "create") {
 
             string description  = getValue (argmap, YCPString ("description"), "");
