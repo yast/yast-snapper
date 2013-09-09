@@ -8,8 +8,6 @@
  */
 
 #include "SnapperAgent.h"
-#include <ctype.h>
-#include <boost/algorithm/string.hpp>
 
 #define PC(n)       (path->component_str(n))
 
@@ -112,6 +110,38 @@ log_query(LogLevel level, const string& component)
     return should_be_logged(ln[level], component);
 }
 
+// call ioctl to create or delete specific btrfs subvolume
+YCPBoolean btrfs_ioctl_call(string path, int request)
+{
+
+    if (path == "") {
+        y2error ("'path' attribute missing!");
+        return YCPBoolean (false);
+    }
+
+    // find a directory one level up
+    // (FIXME check for path ending with /)
+    int idx = path.rfind('/');
+    string updir        = path.substr(0, idx);
+    string name         = path.substr(idx + 1);
+
+    int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
+    if (dirfd < 0)
+    {
+        y2error("opening directory '%s' failed", updir.c_str());
+        return YCPBoolean (false);
+    }
+         
+    struct btrfs_ioctl_vol_args args;
+    memset(&args, 0, sizeof(args));
+    strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
+
+    YCPBoolean ret = YCPBoolean (ioctl(dirfd, request, &args) == 0);
+
+    close(dirfd);
+
+    return ret;
+}
 
 /**
  * Constructor
@@ -175,7 +205,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
     if (!arg.isNull() && arg->isMap())
     	argmap = arg->asMap();
 
-    if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs") {
+    if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs" && PC(0) != "is_subvolume") {
 	y2error ("snapper not initialized: use Execute (.snapper) first!");
 	snapper_error = "not_initialized";
 	return YCPVoid();
@@ -183,6 +213,34 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	
     if (path->length() == 1) {
 
+        /**
+         * Read (.snapper.is_subvolume, "path/to/dir") -> returns true if given directory is a subvolume
+         */
+        if (PC(0) == "is_subvolume") {
+
+            string path = "";
+            if (arg->isString()) {
+              path      = arg->asString()->value();
+            }
+
+            if (path == "") {
+              y2error ("path attribute missing!");
+              return YCPBoolean (false);
+            }
+
+            struct stat status;
+            if (stat(path.c_str(), &status) != 0) {
+              y2error ("status of '%s' cannot be obtained", path.c_str());
+              return YCPBoolean (false);
+            }
+            if (!S_ISDIR(status.st_mode)) {
+              y2error ("'%s' is not a directory", path.c_str());
+              return YCPBoolean (false);
+            }
+
+            // see Btrfs::is_subvolume
+            return YCPBoolean (status.st_ino == 256);
+        }
 	if (PC(0) == "configs") {
 	    YCPList retlist;
 
@@ -410,12 +468,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	return ret;
     }
 
-    if (!snapper_initialized && PC(0) != "create_config") {
-	y2error ("snapper not initialized: use Execute (.snapper) first!");
-	snapper_error = "not_initialized";
-	return YCPVoid();
-    }
-
     if (path->length() == 1) {
 
 	if (PC(0) == "create_config")
@@ -437,7 +489,38 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
 	    return ret;
 	}
-	else if (PC(0) == "create") {
+        /**
+         * Execute(.snapper.delete_config, $[ "config_name" : name $] -> deletes given configuration
+         */
+        if (PC(0) == "delete_config") {
+
+            string name = getValue(argmap, YCPString("config_name"), "");
+
+            if (name == "") {
+              y2error ("'config_name' attribute missing!");
+              return YCPBoolean (false);
+            }
+
+            try
+            {
+              Snapper::deleteConfig(name);
+            }
+            catch (const DeleteConfigFailedException& e)
+            {
+              y2error("deleting config failed (%s).", e.what());
+              return YCPBoolean (false);
+            }
+            return ret;
+        }
+
+        // previous operations do not need initialization
+        if (!snapper_initialized) {
+          y2error ("snapper not initialized: use Execute (.snapper) first!");
+          snapper_error = "not_initialized";
+          return YCPVoid();
+        }
+
+	if (PC(0) == "create") {
 
             string description  = getValue (argmap, YCPString ("description"), "");
             string cleanup      = getValue (argmap, YCPString ("cleanup"), "");
@@ -562,6 +645,26 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	    return ret;
 	}
 
+    }
+    else if (path->length() == 2 && PC(0) == "subvolume") {
+
+        // create new subvolume; argument 'path' must be provided
+        if (PC(1) == "create")
+        {
+            return btrfs_ioctl_call(
+                getValue(argmap, YCPString("path"), ""),
+                BTRFS_IOC_SUBVOL_CREATE
+            );
+        }
+        // delete existing subvolume; argument 'path' must be provided
+        // (delete_config must be called before subvolume.delete)
+        else if (PC(1) == "delete") {
+
+            return btrfs_ioctl_call(
+                getValue(argmap, YCPString("path"), ""),
+                BTRFS_IOC_SNAP_DESTROY
+            );
+        }
     }
     else {
 	y2error("Wrong path '%s' in Execute().", path->toString().c_str());

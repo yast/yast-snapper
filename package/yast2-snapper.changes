@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Sep  9 09:58:39 CEST 2013 - jsuchome@suse.cz
+
+- added API for subvolume handling
+- 3.0.1 
+
+-------------------------------------------------------------------
 Wed Jul 31 08:39:37 UTC 2013 - yast-devel@opensuse.org
 
 - converted from YCP to Ruby by YCP Killer
