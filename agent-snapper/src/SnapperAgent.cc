@@ -470,12 +470,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
     if (path->length() == 1) {
 
-        if (!snapper_initialized && PC(0) != "create_config") {
-          y2error ("snapper not initialized: use Execute (.snapper) first!");
-          snapper_error = "not_initialized";
-          return YCPVoid();
-        }
-
 	if (PC(0) == "create_config")
 	{
 	    string config_name = getValue(argmap, YCPString("config_name"), "root");
@@ -498,7 +492,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
         /**
          * Execute(.snapper.delete_config, $[ "config_name" : name $] -> deletes given configuration
          */
-        else if (PC(0) == "delete_config") {
+        if (PC(0) == "delete_config") {
 
             string name = getValue(argmap, YCPString("config_name"), "");
 
@@ -518,7 +512,15 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
             }
             return ret;
         }
-	else if (PC(0) == "create") {
+
+        // previous operations do not need initialization
+        if (!snapper_initialized) {
+          y2error ("snapper not initialized: use Execute (.snapper) first!");
+          snapper_error = "not_initialized";
+          return YCPVoid();
+        }
+
+	if (PC(0) == "create") {
 
             string description  = getValue (argmap, YCPString ("description"), "");
             string cleanup      = getValue (argmap, YCPString ("cleanup"), "");
