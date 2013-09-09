@@ -8,11 +8,6 @@
  */
 
 #include "SnapperAgent.h"
-#include <ctype.h>
-#include <boost/algorithm/string.hpp>
-
-#include <fcntl.h>
-#include <sys/ioctl.h>
 
 #define PC(n)       (path->component_str(n))
 

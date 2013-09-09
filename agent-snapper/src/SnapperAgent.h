@@ -19,6 +19,12 @@
 #include <snapper/File.h>
 #include <snapper/Logger.h>
 
+#include <ctype.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+
+#include <boost/algorithm/string.hpp>
+
 #include <btrfs/ioctl.h>
 
 /**
