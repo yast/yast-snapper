@@ -205,7 +205,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
     if (!arg.isNull() && arg->isMap())
     	argmap = arg->asMap();
 
-    if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs") {
+    if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs" && PC(0) != "is_subvolume") {
 	y2error ("snapper not initialized: use Execute (.snapper) first!");
 	snapper_error = "not_initialized";
 	return YCPVoid();
@@ -468,13 +468,13 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	return ret;
     }
 
-    if (!snapper_initialized && PC(0) != "create_config") {
-	y2error ("snapper not initialized: use Execute (.snapper) first!");
-	snapper_error = "not_initialized";
-	return YCPVoid();
-    }
-
     if (path->length() == 1) {
+
+        if (!snapper_initialized && PC(0) != "create_config") {
+          y2error ("snapper not initialized: use Execute (.snapper) first!");
+          snapper_error = "not_initialized";
+          return YCPVoid();
+        }
 
 	if (PC(0) == "create_config")
 	{
