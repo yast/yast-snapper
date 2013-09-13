@@ -505,9 +505,14 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
             {
               Snapper::deleteConfig(name);
             }
+            catch (const ConfigNotFoundException& e)
+            {
+              y2error("deleting config '%s' failed (%s).", name.c_str(), e.what());
+              return YCPBoolean (false);
+            }
             catch (const DeleteConfigFailedException& e)
             {
-              y2error("deleting config failed (%s).", e.what());
+              y2error("deleting config '%s' failed (%s).", name.c_str(), e.what());
               return YCPBoolean (false);
             }
             return ret;
