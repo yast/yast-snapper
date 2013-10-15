@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Oct 15 09:31:10 CEST 2013 - jsuchome@suse.cz
+
+- require the version of libsnapper used during build (bnc#845618)
+- 3.0.2
+
+-------------------------------------------------------------------
 Mon Sep  9 09:58:39 CEST 2013 - jsuchome@suse.cz
 
 - added API for subvolume handling
