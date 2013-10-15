@@ -24,7 +24,6 @@ Group:		System/YaST
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
-Requires:	yast2 >= 2.21.22
 License:        GPL-2.0
 BuildRequires:	update-desktop-files yast2 yast2-testsuite libbtrfs-devel
 BuildRequires:  yast2-devtools >= 3.0.6
@@ -32,7 +31,11 @@ BuildRequires:	libsnapper-devel >= 0.0.11
 BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	libtool doxygen gcc-c++ perl-XML-Writer
 
+Requires:	yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
+
+# require the version of libsnapper used during build (bnc#845618)
+%requires_eq libsnapper2
 
 Summary:	YaST - file system snapshots review
 
