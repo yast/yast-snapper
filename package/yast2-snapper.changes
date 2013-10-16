@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Oct 15 16:04:11 CEST 2013 - jsuchome@suse.cz
+
+- require the version of libsnapper used during build (bnc#845618) 
+- 3.1.1
+
+-------------------------------------------------------------------
 Thu Sep 19 17:10:43 UTC 2013 - lslezak@suse.cz
 
 - do not use *.spec.in template, use *.spec file with RPM macros
