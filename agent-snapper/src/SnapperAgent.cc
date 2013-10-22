@@ -526,13 +526,14 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
             YCPMap userdata     = getMapValue (argmap, YCPString ("userdata"));
 
             const Snapshots& snapshots          = sh->getSnapshots();
-            Snapshots::iterator snap;
 
             if (type == "single") {
-                snap    = sh->createSingleSnapshot(description);
+		sh->createSingleSnapshot(getuid(), description, cleanup,
+					 ycpmap2stringmap(userdata));
             }
             else if (type == "pre") {
-                snap    = sh->createPreSnapshot(description);
+		sh->createPreSnapshot(getuid(), description, cleanup,
+				      ycpmap2stringmap(userdata));
             }
             else if (type == "post") {
                 // check if pre was given!
@@ -552,7 +553,8 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
                     }
                     else
                     {
-                        snap    = sh->createPostSnapshot(description, snap1);
+			sh->createPostSnapshot(snap1, getuid(), description, cleanup,
+					       ycpmap2stringmap(userdata));
                     }
                 }
             }
@@ -561,9 +563,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
                 return YCPBoolean (false);
             }
 
-            snap->setCleanup (cleanup);
-            snap->setUserdata (ycpmap2stringmap (userdata));
-            snap->flushInfo();
             return ret;
         }
         else if (PC(0) == "modify") {
@@ -579,19 +578,17 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
                 return YCPBoolean (false);
             }
 
-            if (argmap->hasKey(YCPString ("description")))
-            {
-                snap->setDescription (getValue (argmap, YCPString ("description"), ""));
-            }
-            if (argmap->hasKey(YCPString ("cleanup")))
-            {
-                snap->setCleanup (getValue (argmap, YCPString ("cleanup"), ""));
-            }
-            if (argmap->hasKey(YCPString ("userdata")))
-            {
-                snap->setUserdata (ycpmap2stringmap (getMapValue (argmap, YCPString ("userdata"))));
-            }
-            snap->flushInfo();
+	    string description = argmap->hasKey(YCPString("description")) ?
+		getValue(argmap, YCPString("description"), "") : snap->getDescription();
+
+	    string cleanup = argmap->hasKey(YCPString("cleanup")) ?
+		getValue(argmap, YCPString("cleanup"), "") : snap->getCleanup();
+
+	    map<string, string> userdata = argmap->hasKey(YCPString("userdata")) ?
+		ycpmap2stringmap(getMapValue(argmap, YCPString("userdata"))) : snap->getUserdata();
+
+	    sh->modifySnapshot(snap, description, cleanup, userdata);
+
             return ret;
         }
         else if (PC(0) == "delete") {

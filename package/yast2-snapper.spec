@@ -27,7 +27,7 @@ Source0:        %{name}-%{version}.tar.bz2
 License:        GPL-2.0
 BuildRequires:	update-desktop-files yast2 yast2-testsuite libbtrfs-devel
 BuildRequires:  yast2-devtools >= 3.0.6
-BuildRequires:	libsnapper-devel >= 0.0.11
+BuildRequires:	libsnapper-devel >= 0.0.17
 BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	libtool doxygen gcc-c++ perl-XML-Writer
 
