@@ -328,7 +328,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
 
 	/**
-	 * Read(.snapper.diff_list) -> show difference between snapnots num1 and num2 as list.
+	 * Read(.snapper.diff_list) -> show difference between snapshots num1 and num2 as list.
 	 */
 	if (PC(0) == "diff_list") {
 	    YCPList retlist;
@@ -347,7 +347,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	    return retlist;
 	}
 	/**
-	 * Read(.snapper.diff_index) -> show difference between snapnots num1 and num2 as one-level map:
+	 * Read(.snapper.diff_index) -> show difference between snapshots num1 and num2 as one-level map:
 	 * (mapping each file to its changes)
 	 */
 	if (PC(0) == "diff_index") {
@@ -367,7 +367,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	    return retmap;
 	}
 	/**
-	 * Read(.snapper.diff_tree) -> show difference between snapnots num1 and num2 as tree.
+	 * Read(.snapper.diff_tree) -> show difference between snapshots num1 and num2 as tree.
 	 */
 	else if (PC(0) == "diff_tree")
 	{
