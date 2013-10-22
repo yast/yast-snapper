@@ -146,12 +146,9 @@ YCPBoolean btrfs_ioctl_call(string path, int request)
 /**
  * Constructor
  */
-SnapperAgent::SnapperAgent() : SCRAgent()
+SnapperAgent::SnapperAgent()
+    : SCRAgent(), sh(NULL), snapper_initialized(false), snapper_error("")
 {
-    sh			= NULL;
-    snapper_initialized	= false;
-    snapper_error	= "";
-
     snapper::setLogDo(&log_do);
     snapper::setLogQuery(&log_query);
 }
@@ -161,11 +158,7 @@ SnapperAgent::SnapperAgent() : SCRAgent()
  */
 SnapperAgent::~SnapperAgent()
 {
-    if (sh)
-    {
-	delete sh;
-	sh = 0;
-    }
+    delete sh;
 }
 
 
