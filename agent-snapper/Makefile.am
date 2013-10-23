@@ -1,1 +1,1 @@
-SUBDIRS = conf doc src
+SUBDIRS = doc src
