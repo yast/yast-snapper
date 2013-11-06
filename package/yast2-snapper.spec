@@ -25,14 +25,21 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
 
 License:        GPL-2.0
-BuildRequires:	update-desktop-files yast2 yast2-testsuite libbtrfs-devel
-BuildRequires:  yast2-devtools >= 3.0.6
+
+BuildRequires:	doxygen
+BuildRequires:	gcc-c++
+BuildRequires:	libbtrfs-devel
 BuildRequires:	libsnapper-devel >= 0.0.17
+BuildRequires:	libtool
+BuildRequires:	update-desktop-files
+BuildRequires:	yast2
 BuildRequires:	yast2-core-devel >= 2.23.1
-BuildRequires:	libtool doxygen gcc-c++ perl-XML-Writer
+BuildRequires:	yast2-devtools >= 3.0.6
+BuildRequires:	yast2-testsuite
 
 Requires:	yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
+Supplements:	packageand(snapper:yast2)
 
 # require the version of libsnapper used during build (bnc#845618)
 %requires_eq libsnapper2
@@ -50,7 +57,6 @@ YaST module for accessing and managing btrfs system snapshots
 
 %install
 %yast_install
-
 
 %files
 %defattr(-,root,root)

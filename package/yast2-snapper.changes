@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Wed Nov 06 09:54:33 CET 2013 - aschnell@suse.de
+
+- added supplements snapper and yast2 (fate#314695)
+
+-------------------------------------------------------------------
 Tue Oct 15 16:04:11 CEST 2013 - jsuchome@suse.cz
 
 - require the version of libsnapper used during build (bnc#845618) 
