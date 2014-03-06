@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-snapper
 #
-# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -45,6 +45,7 @@ Supplements:	packageand(snapper:yast2)
 %requires_eq libsnapper2
 
 Summary:	YaST - file system snapshots review
+Url:            http://github.com/yast/yast-snapper/
 
 %description
 YaST module for accessing and managing btrfs system snapshots
