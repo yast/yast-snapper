@@ -23,8 +23,7 @@ mkinstalldirs
 stamp-h*
 Makefile.am.common
 *.ami
-*.bz2
-*.spec
+package/*.bz2
 .dep
 tmp.*
 *.log
