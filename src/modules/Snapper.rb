@@ -349,9 +349,9 @@ module Yast
 
       if !ReadConfigs()
         # error popup
-        Report.Error(_("No snapper configs exist. You have to create one or more
-configs to use yast2-snapper. The snapper command line
-tool can be used to create configs."))
+        Report.Error(_("No snapper configurations exist. You have to create one or more
+configurations to use yast2-snapper. The snapper command line
+tool can be used to create configurations."))
         return false
       end
 
