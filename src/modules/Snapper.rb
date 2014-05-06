@@ -53,9 +53,10 @@ module Yast
       @selected_snapshot_index = 0
 
       # list of configurations
-      @configs = ["root"]
+      @configs = []
 
-      @current_config = "root"
+      @current_config = ""
+
     end
 
     # Return map of files modified between given snapshots
@@ -196,6 +197,7 @@ module Yast
       true
     end
 
+
     def LastSnapperErrorMap
       Convert.to_map(SCR.Read(path(".snapper.error")))
     end
@@ -207,18 +209,19 @@ module Yast
         :from => "any",
         :to   => "list <string>"
       )
-      if @configs == nil
-        # error popup
-        Report.Error(_("File /etc/sysconfig/snapper is not available."))
-        @configs = ["root"]
-      end
-      if !Builtins.contains(@configs, "root") &&
-          Ops.greater_than(Builtins.size(@configs), 0)
-        @current_config = Ops.get(@configs, 0, "root")
-      end
-      deep_copy(@configs)
-    end
 
+      if @configs == nil || @configs.empty?
+        return false
+      end
+
+      if @configs.include?("root")
+        @current_config = "root"
+      else
+        @current_config = @configs[0]
+      end
+
+      return true
+    end
 
 
     # Initialize snapper agent
@@ -246,8 +249,9 @@ module Yast
           )
         )
       end
-      init
+      return init
     end
+
 
     # Delete existing snapshot
     # Return true on success
@@ -343,7 +347,13 @@ module Yast
 
       Progress.NextStage
 
-      ReadConfigs()
+      if !ReadConfigs()
+        # error popup
+        Report.Error(_("No snapper configs exist. You have to create one or more
+configs to use yast2-snapper. The snapper command line
+tool can be used to create configs."))
+        return false
+      end
 
       return false if !InitializeSnapper(@current_config)
 
@@ -493,7 +503,7 @@ module Yast
     publish :function => :GetFileModification, :type => "map (string, integer, integer)"
     publish :function => :ReadSnapshots, :type => "boolean ()"
     publish :function => :LastSnapperErrorMap, :type => "map ()"
-    publish :function => :ReadConfigs, :type => "list <string> ()"
+    publish :function => :ReadConfigs, :type => "boolean ()"
     publish :function => :InitializeSnapper, :type => "boolean (string)"
     publish :function => :DeleteSnapshot, :type => "boolean (map)"
     publish :function => :ModifySnapshot, :type => "boolean (map)"
