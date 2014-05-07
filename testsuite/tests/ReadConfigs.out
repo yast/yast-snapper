@@ -1,13 +1,12 @@
 Read	.snapper.configs []
-Return	[]
-Return	root
+Return	false
+Return	
 Read	.snapper.configs nil
-Log	File /etc/sysconfig/snapper is not available.
-Return	["root"]
-Return	root
+Return	false
+Return	
 Read	.snapper.configs ["opt", "var", "root"]
-Return	["opt", "var", "root"]
+Return	true
 Return	root
 Read	.snapper.configs ["opt", "var"]
-Return	["opt", "var"]
+Return	true
 Return	opt

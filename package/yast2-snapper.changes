@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue May 06 16:23:35 CEST 2014 - aschnell@suse.de
+
+- improved error message on systems with no snapper configs
+  (bnc#876535)
+- 3.1.2
+
+-------------------------------------------------------------------
 Wed Nov 06 09:54:33 CET 2013 - aschnell@suse.de
 
 - added supplements snapper and yast2 (fate#314695)
