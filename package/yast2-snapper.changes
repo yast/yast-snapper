@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon May 26 16:54:22 CEST 2014 - aschnell@suse.de
+
+- avoid time format that needs translation (bnc#878613)
+- 3.1.3
+
+-------------------------------------------------------------------
 Tue May 06 16:23:35 CEST 2014 - aschnell@suse.de
 
 - improved error message on systems with no snapper configs

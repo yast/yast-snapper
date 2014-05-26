@@ -43,6 +43,12 @@ module Yast
       Yast.include include_target, "snapper/helps.rb"
     end
 
+
+    def timestring(t)
+      return Time.at(t).strftime("%F %T")
+    end
+
+
     def ReallyAbort
       Popup.ReallyAbort(true)
     end
@@ -376,11 +382,7 @@ module Yast
           num = Ops.get_integer(s, "num", 0)
           date = ""
           if num != 0
-            date = Builtins.timestring(
-              "%c",
-              Ops.get_integer(s, "date", 0),
-              false
-            )
+            date = timestring(Ops.get_integer(s, ["date"], 0))
           end
           userdata = userdata2string(Ops.get_map(s, "userdata", {}))
           if Ops.get_symbol(s, "type", :none) == :SINGLE
@@ -408,11 +410,7 @@ module Yast
               next
             end
             desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
-            pre_date = Builtins.timestring(
-              "%c",
-              Ops.get_integer(Snapper.snapshots, [index, "date"], 0),
-              false
-            )
+            pre_date = timestring(Ops.get_integer(Snapper.snapshots, [index, "date"], 0))
             snapshot_items = Builtins.add(
               snapshot_items,
               Item(
@@ -612,16 +610,8 @@ module Yast
         [pre_index, "description"],
         ""
       )
-      pre_date = Builtins.timestring(
-        "%c",
-        Ops.get_integer(Snapper.snapshots, [pre_index, "date"], 0),
-        false
-      )
-      date = Builtins.timestring(
-        "%c",
-        Ops.get_integer(snapshot, "date", 0),
-        false
-      )
+      pre_date = timestring(Ops.get_integer(Snapper.snapshots, [pre_index, "date"], 0))
+      date = timestring(Ops.get_integer(snapshot, "date", 0))
       type = Ops.get_symbol(snapshot, "type", :NONE)
       combo_items = []
       Builtins.foreach(Snapper.snapshots) do |s|

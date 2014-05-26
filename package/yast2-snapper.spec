@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.2
+Version:        3.1.3
 Release:        0
 Group:		System/YaST
 
