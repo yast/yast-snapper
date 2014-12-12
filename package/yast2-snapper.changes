@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Dec 12 13:11:35 CET 2014 - aschnell@suse.de
+
+- handle invalid UTF-8 in file diff (bsc#907679)
+- 3.1.5
+
+-------------------------------------------------------------------
 Thu Dec  4 09:51:37 UTC 2014 - jreidinger@suse.com
 
 - remove X-KDE-Library from desktop file (bnc#899104)
