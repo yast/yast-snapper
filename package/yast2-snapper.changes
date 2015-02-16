@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Feb 16 12:10:50 CET 2015 - aschnell@suse.de
+
+- adapted to changes in snapper
+- 3.1.6
+
+-------------------------------------------------------------------
 Fri Dec 12 13:11:35 CET 2014 - aschnell@suse.de
 
 - handle invalid UTF-8 in file diff (bsc#907679)
