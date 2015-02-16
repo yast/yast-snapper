@@ -1,10 +1,9 @@
-/* SnapperAgent.cc
+/*
+ * SnapperAgent.cc
  *
  * An agent for accessing snapper library
  *
  * Authors: Jiri Suchomel <jsuchome@suse.cz>
- *
- * $Id: SnapperAgent.cc 63174 2011-01-13 10:50:42Z jsuchome $
  */
 
 #include "SnapperAgent.h"
@@ -72,7 +71,7 @@ YCPMap SnapperAgent::getMapValue (const YCPMap &map, const YCPString &key)
 
 YCPMap map2ycpmap (const map<string, string>& userdata)
 {
-    YCPMap m;  
+    YCPMap m;
     for (map<string, string>::const_iterator it = userdata.begin(); it != userdata.end(); ++it)
     {
         m->add (YCPString (it->first), YCPString (it->second));
@@ -82,7 +81,7 @@ YCPMap map2ycpmap (const map<string, string>& userdata)
 
 map<string, string> ycpmap2stringmap (const YCPMap &ycp_map)
 {
-    map<string, string> m; 
+    map<string, string> m;
 
     for (YCPMap::const_iterator i = ycp_map->begin(); i != ycp_map->end(); i++) {
         string key = i->first->asString()->value();
@@ -130,7 +129,7 @@ YCPBoolean btrfs_ioctl_call(string path, int request)
         y2error("opening directory '%s' failed", updir.c_str());
         return YCPBoolean (false);
     }
-         
+
     struct btrfs_ioctl_vol_args args;
     memset(&args, 0, sizeof(args));
     strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
@@ -188,8 +187,8 @@ make_ycpmap(const Tree& tree)
 /**
  * Read
  */
-YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
-
+YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt)
+{
     y2debug ("path in Read: '%s'.", path->toString().c_str());
     YCPValue ret = YCPVoid();
 
@@ -202,7 +201,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	snapper_error = "not_initialized";
 	return YCPVoid();
     }
-	
+
     if (path->length() == 1) {
 
         /**
@@ -286,8 +285,8 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
 		switch (it->getType())
 		{
-		    case SINGLE: s->add (YCPString ("type"), YCPSymbol ("SINGLE")); break; 
-		    case PRE: s->add (YCPString ("type"), YCPSymbol ("PRE")); break; 
+		    case SINGLE: s->add (YCPString ("type"), YCPSymbol ("SINGLE")); break;
+		    case PRE: s->add (YCPString ("type"), YCPSymbol ("PRE")); break;
 		    case POST: s->add (YCPString ("type"), YCPSymbol ("POST")); break;
 		}
 
@@ -429,7 +428,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
      * Execute (.snapper) call: Initialize snapper object
      */
     if (path->length() == 0) {
-    
+
 	snapper_initialized	= false;
 	if (sh)
 	{
