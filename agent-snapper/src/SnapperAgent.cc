@@ -113,15 +113,14 @@ log_query(LogLevel level, const string& component)
 // call ioctl to create or delete specific btrfs subvolume
 YCPBoolean btrfs_ioctl_call(string path, int request)
 {
-
-    if (path == "") {
+    if (path.empty()) {
         y2error ("'path' attribute missing!");
         return YCPBoolean (false);
     }
 
     // find a directory one level up
     // (FIXME check for path ending with /)
-    int idx = path.rfind('/');
+    string::size_type idx = path.rfind('/');
     string updir        = path.substr(0, idx);
     string name         = path.substr(idx + 1);
 
@@ -216,7 +215,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
               path      = arg->asString()->value();
             }
 
-            if (path == "") {
+            if (path.empty()) {
               y2error ("path attribute missing!");
               return YCPBoolean (false);
             }
@@ -489,7 +488,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
             string name = getValue(argmap, YCPString("config_name"), "");
 
-            if (name == "") {
+            if (name.empty()) {
               y2error ("'config_name' attribute missing!");
               return YCPBoolean (false);
             }
