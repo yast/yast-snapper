@@ -1,10 +1,9 @@
-/* SnapperAgent.cc
+/*
+ * SnapperAgent.cc
  *
  * An agent for accessing snapper library
  *
  * Authors: Jiri Suchomel <jsuchome@suse.cz>
- *
- * $Id: SnapperAgent.cc 63174 2011-01-13 10:50:42Z jsuchome $
  */
 
 #include "SnapperAgent.h"
@@ -72,7 +71,7 @@ YCPMap SnapperAgent::getMapValue (const YCPMap &map, const YCPString &key)
 
 YCPMap map2ycpmap (const map<string, string>& userdata)
 {
-    YCPMap m;  
+    YCPMap m;
     for (map<string, string>::const_iterator it = userdata.begin(); it != userdata.end(); ++it)
     {
         m->add (YCPString (it->first), YCPString (it->second));
@@ -82,7 +81,7 @@ YCPMap map2ycpmap (const map<string, string>& userdata)
 
 map<string, string> ycpmap2stringmap (const YCPMap &ycp_map)
 {
-    map<string, string> m; 
+    map<string, string> m;
 
     for (YCPMap::const_iterator i = ycp_map->begin(); i != ycp_map->end(); i++) {
         string key = i->first->asString()->value();
@@ -113,15 +112,14 @@ log_query(LogLevel level, const string& component)
 // call ioctl to create or delete specific btrfs subvolume
 YCPBoolean btrfs_ioctl_call(string path, int request)
 {
-
-    if (path == "") {
+    if (path.empty()) {
         y2error ("'path' attribute missing!");
         return YCPBoolean (false);
     }
 
     // find a directory one level up
     // (FIXME check for path ending with /)
-    int idx = path.rfind('/');
+    string::size_type idx = path.rfind('/');
     string updir        = path.substr(0, idx);
     string name         = path.substr(idx + 1);
 
@@ -131,7 +129,7 @@ YCPBoolean btrfs_ioctl_call(string path, int request)
         y2error("opening directory '%s' failed", updir.c_str());
         return YCPBoolean (false);
     }
-         
+
     struct btrfs_ioctl_vol_args args;
     memset(&args, 0, sizeof(args));
     strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
@@ -189,8 +187,8 @@ make_ycpmap(const Tree& tree)
 /**
  * Read
  */
-YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
-
+YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt)
+{
     y2debug ("path in Read: '%s'.", path->toString().c_str());
     YCPValue ret = YCPVoid();
 
@@ -203,7 +201,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	snapper_error = "not_initialized";
 	return YCPVoid();
     }
-	
+
     if (path->length() == 1) {
 
         /**
@@ -216,7 +214,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
               path      = arg->asString()->value();
             }
 
-            if (path == "") {
+            if (path.empty()) {
               y2error ("path attribute missing!");
               return YCPBoolean (false);
             }
@@ -238,7 +236,7 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 	    YCPList retlist;
 
 	    try {
-		list<ConfigInfo> configs = Snapper::getConfigs();
+		list<ConfigInfo> configs = Snapper::getConfigs("/");
 		for (list<ConfigInfo>::const_iterator it = configs.begin(); it != configs.end(); ++it)
 		{
 		    retlist->add (YCPString (it->getConfigName()));
@@ -287,8 +285,8 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
 		switch (it->getType())
 		{
-		    case SINGLE: s->add (YCPString ("type"), YCPSymbol ("SINGLE")); break; 
-		    case PRE: s->add (YCPString ("type"), YCPSymbol ("PRE")); break; 
+		    case SINGLE: s->add (YCPString ("type"), YCPSymbol ("SINGLE")); break;
+		    case PRE: s->add (YCPString ("type"), YCPSymbol ("PRE")); break;
 		    case POST: s->add (YCPString ("type"), YCPSymbol ("POST")); break;
 		}
 
@@ -430,7 +428,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
      * Execute (.snapper) call: Initialize snapper object
      */
     if (path->length() == 0) {
-    
+
 	snapper_initialized	= false;
 	if (sh)
 	{
@@ -441,7 +439,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	string config_name = getValue (argmap, YCPString ("config"), "root");
 	try
 	{
-	    sh = new Snapper(config_name);
+	    sh = new Snapper(config_name, "/");
 	}
 	catch (const ConfigNotFoundException& e)
 	{
@@ -472,7 +470,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
 	    try
 	    {
-		Snapper::createConfig(config_name, subvolume, fstype, template_name);
+		Snapper::createConfig(config_name, "/", subvolume, fstype, template_name);
 	    }
 	    catch (const CreateConfigFailedException& e)
 	    {
@@ -489,14 +487,14 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
             string name = getValue(argmap, YCPString("config_name"), "");
 
-            if (name == "") {
+            if (name.empty()) {
               y2error ("'config_name' attribute missing!");
               return YCPBoolean (false);
             }
 
             try
             {
-              Snapper::deleteConfig(name);
+		Snapper::deleteConfig(name, "/");
             }
             catch (const ConfigNotFoundException& e)
             {
@@ -520,21 +518,22 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
 	if (PC(0) == "create") {
 
-            string description  = getValue (argmap, YCPString ("description"), "");
-            string cleanup      = getValue (argmap, YCPString ("cleanup"), "");
-            string type         = getValue (argmap, YCPString ("type"), "single");
-            YCPMap userdata     = getMapValue (argmap, YCPString ("userdata"));
+	    string type = getValue (argmap, YCPString ("type"), "single");
+
+	    SCD scd;
+	    scd.uid = getuid();
+	    scd.description = getValue(argmap, YCPString("description"), "");
+	    scd.cleanup = getValue(argmap, YCPString("cleanup"), "");
+	    scd.userdata = ycpmap2stringmap(getMapValue(argmap, YCPString("userdata")));
 
             const Snapshots& snapshots          = sh->getSnapshots();
 
             if (type == "single") {
-		sh->createSingleSnapshot(getuid(), description, cleanup,
-					 ycpmap2stringmap(userdata));
+		sh->createSingleSnapshot(scd);
             }
             else if (type == "pre") {
-		sh->createPreSnapshot(getuid(), description, cleanup,
-				      ycpmap2stringmap(userdata));
-            }
+		sh->createPreSnapshot(scd);
+	    }
             else if (type == "post") {
                 // check if pre was given!
                 int pre = getIntValue (argmap, YCPString ("pre"), -1);
@@ -553,8 +552,7 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
                     }
                     else
                     {
-			sh->createPostSnapshot(snap1, getuid(), description, cleanup,
-					       ycpmap2stringmap(userdata));
+			sh->createPostSnapshot(snap1, scd);
                     }
                 }
             }
@@ -578,16 +576,18 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
                 return YCPBoolean (false);
             }
 
-	    string description = argmap->hasKey(YCPString("description")) ?
+	    SMD smd;
+
+	    smd.description = argmap->hasKey(YCPString("description")) ?
 		getValue(argmap, YCPString("description"), "") : snap->getDescription();
 
-	    string cleanup = argmap->hasKey(YCPString("cleanup")) ?
+	    smd.cleanup = argmap->hasKey(YCPString("cleanup")) ?
 		getValue(argmap, YCPString("cleanup"), "") : snap->getCleanup();
 
-	    map<string, string> userdata = argmap->hasKey(YCPString("userdata")) ?
+	    smd.userdata = argmap->hasKey(YCPString("userdata")) ?
 		ycpmap2stringmap(getMapValue(argmap, YCPString("userdata"))) : snap->getUserdata();
 
-	    sh->modifySnapshot(snap, description, cleanup, userdata);
+	    sh->modifySnapshot(snap, smd);
 
             return ret;
         }

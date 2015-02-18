@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-snapper
 #
-# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2015 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.5
+Version:        3.1.6
 Release:        0
 Group:		System/YaST
 
@@ -29,7 +29,7 @@ License:        GPL-2.0
 BuildRequires:	doxygen
 BuildRequires:	gcc-c++
 BuildRequires:	libbtrfs-devel
-BuildRequires:	libsnapper-devel >= 0.0.17
+BuildRequires:	libsnapper-devel >= 0.2.6
 BuildRequires:	libtool
 BuildRequires:	update-desktop-files
 BuildRequires:	yast2
