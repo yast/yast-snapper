@@ -35,6 +35,7 @@ BuildRequires:	yast2
 BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	yast2-devtools >= 3.1.10
 BuildRequires:	yast2-testsuite
+BuildRequires:	rubygem(ruby-dbus)
 
 Requires:	yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
@@ -63,7 +64,8 @@ YaST module for accessing and managing file-system snapshots
 %dir %{yast_yncludedir}/snapper
 %{yast_yncludedir}/snapper/*
 %{yast_clientdir}/snapper.rb
-%{yast_moduledir}/Snapper.*
+%{yast_moduledir}/Snapper.rb
+%{yast_moduledir}/SnapperDbus.rb
 %{yast_desktopdir}/snapper.desktop
 %{yast_scrconfdir}/*.scr
 %{yast_plugindir}/libpy2ag_snapper*
