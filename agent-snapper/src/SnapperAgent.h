@@ -3,8 +3,6 @@
  * Snapper agent implementation
  *
  * Authors: Jiri Suchomel <jsuchome@suse.cz>
- *
- * $Id: SnapperAgent.h 63174 2011-01-13 10:50:42Z jsuchome $
  */
 
 #ifndef _SnapperAgent_h
@@ -25,8 +23,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <btrfs/ioctl.h>
-
 /**
  * @short An interface class between YaST2 and Snapper Agent
  */
@@ -39,7 +35,6 @@ private:
 
     snapper::Snapper* sh;
     bool snapper_initialized;
-    string snapper_error;
 
     /**
      * search the map for value of given key; both key and value have to be strings
@@ -60,12 +55,6 @@ private:
      * key is string and value is YCPList
      */
     YCPList getListValue (const YCPMap &map, const YCPString &key);
-
-    /**
-     * Search the map for value of given key;
-     * key is string and value is YCPMap
-     */
-    YCPMap getMapValue (const YCPMap &map, const YCPString &key);
 
 public:
     /**

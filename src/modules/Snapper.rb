@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2006-2012 Novell, Inc. All Rights Reserved.
+# Copyright (c) 2006-2015 Novell, Inc. All Rights Reserved.
 #
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -30,7 +30,11 @@
 require "yast"
 
 module Yast
+
   class SnapperClass < Module
+
+    include Yast::Logger
+
     def main
       Yast.import "UI"
       textdomain "snapper"
@@ -40,6 +44,7 @@ module Yast
       Yast.import "Progress"
       Yast.import "Report"
       Yast.import "String"
+      Yast.import "SnapperDbus"
 
       # global list of all snapshot
       @snapshots = []
@@ -175,20 +180,28 @@ module Yast
       deep_copy(ret)
     end
 
+
     # Read the list of snapshots
     def ReadSnapshots
-      @snapshots = []
-      snapshot_maps = Convert.convert(
-        SCR.Read(path(".snapper.snapshots")),
-        :from => "any",
-        :to   => "list <map>"
-      )
+
+      snapshot_maps = SnapperDbus.list_snapshots(@current_config)
+
       snapshot_maps = [] if snapshot_maps == nil
+      @snapshots = []
       i = 0
       Builtins.foreach(snapshot_maps) do |snapshot|
         id = Ops.get_integer(snapshot, "num", 0)
         next if id == 0 # ignore the 'current system'
         Ops.set(snapshot, "name", Builtins.tostring(id))
+
+        if snapshot["type"] == :PRE
+          snapshot_maps.each do |x|
+            if x["type"] == :POST && x["pre_num"] == snapshot["num"]
+              snapshot["post_num"] = x["num"]
+            end
+          end
+        end
+
         Builtins.y2debug("snapshot data: %1", snapshot)
         @snapshots = Builtins.add(@snapshots, snapshot)
         Ops.set(@id2index, id, i)
@@ -198,147 +211,98 @@ module Yast
     end
 
 
-    def LastSnapperErrorMap
-      Convert.to_map(SCR.Read(path(".snapper.error")))
-    end
-
-
     def ReadConfigs
-      @configs = Convert.convert(
-        SCR.Read(path(".snapper.configs")),
-        :from => "any",
-        :to   => "list <string>"
-      )
 
-      if @configs == nil || @configs.empty?
-        return false
-      end
+      @configs = SnapperDbus.list_configs()
 
       if @configs.include?("root")
         @current_config = "root"
-      else
+      elsif !@configs.empty?
         @current_config = @configs[0]
+      else
+        @current_config = ""
       end
 
-      return true
     end
 
 
-    # Initialize snapper agent
-    # Return true on success
-    def InitializeSnapper(config)
-      init = Convert.to_boolean(
-        SCR.Execute(path(".snapper"), { "config" => config })
-      )
-      if !init
-        err_map = LastSnapperErrorMap()
-        type = Ops.get_string(err_map, "type", "")
-        details = _("Reason not known.")
-        if type == "config_not_found"
-          details = _("Configuration not found.")
-        elsif type == "config_invalid"
-          details = _("Configuration is not valid.")
-        end
 
-        Builtins.y2warning("init failed with '%1'", err_map)
-        # error popup
-        Report.Error(
-          Builtins.sformat(
-            _("Failed to initialize snapper library:\n%1"),
-            details
-          )
-        )
+    # Create new snapshot
+    # Return true on success
+    def CreateSnapshot(args)
+
+      case args["type"]
+      when "single"
+        SnapperDbus.create_single_snapshot(@current_config, args["description"], args["cleanup"],
+                                           args["userdata"])
+      when "pre"
+        SnapperDbus.create_pre_snapshot(@current_config, args["description"], args["cleanup"],
+                                        args["userdata"])
+      when "post"
+        SnapperDbus.create_post_snapshot(@current_config, args["pre"], args["description"],
+                                         args["cleanup"], args["userdata"])
       end
-      return init
+
+      return true
+
+    rescue Exception => e
+      Report.Error(_("Failed to create new snapshot:" + "\n" + e.message))
+      return false
+    end
+
+
+    # Modify existing snapshot
+    # Return true on success
+    def ModifySnapshot(args)
+
+      SnapperDbus.set_snapshot(@current_config, args["num"], args["description"], args["cleanup"],
+                               args["userdata"])
+
+      return true
+
+    rescue Exception => e
+      Report.Error(_("Failed to modify snapshot:" + "\n" + e.message))
+      return false
+
     end
 
 
     # Delete existing snapshot
     # Return true on success
     def DeleteSnapshot(args)
-      args = deep_copy(args)
-      success = Convert.to_boolean(SCR.Execute(path(".snapper.delete"), args))
-      if !success
-        err_map = LastSnapperErrorMap()
-        type = Ops.get_string(err_map, "type", "")
-        details = _("Reason not known.")
 
-        details = _("Snapshot was not found.") if type == "not_found"
+      SnapperDbus.delete_snapshots(@current_config, [ args["num"] ])
 
-        Builtins.y2warning("deleting failed with '%1'", err_map)
-        # error popup
-        Report.Error(
-          Builtins.sformat(_("Failed to delete snapshot:\n%1"), details)
-        )
-      end
-      success
+      return true
+
+    rescue Exception => e
+      Report.Error(_("Failed to delete snapshot:" + "\n" + e.message))
+      return false
+
     end
-    # Modify existing snapshot
+
+
+    # Init snapper (get configs and snapshots)
     # Return true on success
-    def ModifySnapshot(args)
-      args = deep_copy(args)
-      success = Convert.to_boolean(SCR.Execute(path(".snapper.modify"), args))
-      if !success
-        err_map = LastSnapperErrorMap()
-        type = Ops.get_string(err_map, "type", "")
-        details = _("Reason not known.")
-
-        Builtins.y2warning("modification failed with '%1'", err_map)
-        # error popup
-        Report.Error(
-          Builtins.sformat(_("Failed to modify snapshot:\n%1"), details)
-        )
-      end
-      success
-    end
-
-    # Create new snapshot
-    # Return true on success
-    def CreateSnapshot(args)
-      args = deep_copy(args)
-      success = Convert.to_boolean(SCR.Execute(path(".snapper.create"), args))
-      if !success
-        err_map = LastSnapperErrorMap()
-        type = Ops.get_string(err_map, "type", "")
-        details = _("Reason not known.")
-
-        if type == "wrong_snapshot_type"
-          details = _("Wrong snapshot type given.")
-        elsif type == "pre_not_given"
-          details = _("'Pre' snapshot was not given.")
-        elsif type == "pre_not_found"
-          details = _("Given 'Pre' snapshot was not found.")
-        end
-
-        Builtins.y2warning("creating failed with '%1'", err_map)
-        # error popup
-        Report.Error(
-          Builtins.sformat(_("Failed to create new snapshot:\n%1"), details)
-        )
-      end
-      success
-    end
-
-    # Read all snapper settings
-    # @return true on success
-    def Read
-      # Snapper read dialog caption
-      caption = _("Initializing Snapper")
-
-      steps = 2
+    def Init
 
       # We do not set help text here, because it was set outside
       Progress.New(
-        caption,
+       # Snapper read dialog caption
+        _("Initializing Snapper"),
         " ",
-        steps,
+        2,
         [
-          # Progress stage 1/3
-          _("Read the list of snapshots")
+          # Progress stage 1/2
+          _("Read list of configurations"),
+          # Progress stage 2/2
+          _("Read list of snapshots"),
         ],
         [
-          # Progress step 1/3
-          _("Reading the database..."),
+          # Progress step 1/2
+          _("Reading list of configurations"),
+          # Progress step 2/2
+          _("Reading list of snapshots"),
           # Progress finished
           _("Finished")
         ],
@@ -347,21 +311,34 @@ module Yast
 
       Progress.NextStage
 
-      if !ReadConfigs()
-        # error popup
-        Report.Error(_("No snapper configurations exist. You have to create one or more
-configurations to use yast2-snapper. The snapper command line
-tool can be used to create configurations."))
+      begin
+        ReadConfigs()
+      rescue Exception => e
+        Report.Error(_("Querying snapper configurations failed:") + "\n" + e.message)
         return false
       end
 
-      return false if !InitializeSnapper(@current_config)
-
-      ReadSnapshots()
+      if @configs.empty?
+        Report.Error(_("No snapper configurations exist. You have to create one or more
+configurations to use yast2-snapper. The snapper command line
+tool can be used to create configurations."))
+      end
 
       Progress.NextStage
-      true
+
+      begin
+        ReadSnapshots()
+      rescue Exception => e
+        Report.Error(_("Querying snapper snapshots failed:") + "\n" + e.message)
+        return false
+      end
+
+      Progress.NextStage
+
+      return true
+
     end
+
 
     # Return the given file mode as octal number
     def GetFileMode(file)
@@ -490,6 +467,34 @@ tool can be used to create configurations."))
       ret
     end
 
+
+    # convert map with userdata to a string
+    # { "a" => "1", "b" => "2" } -> "a=1, b=2"
+    def userdata_to_string(userdata)
+      return userdata.map { |k, v| "#{k}=#{v}" }.join(", ")
+    end
+
+
+    # convert string with userdata to a map
+    # "a=1, b=2" -> { "a" => "1", "b" => "2" }
+    def string_to_userdata(string)
+
+      tmp1 = string.split(",")
+
+      tmp2 = tmp1.map do |s|
+        s.split("=", 2)
+      end
+
+      # TODO, check for = sign, trim
+
+      log.info("haha 1 '#{tmp1}' '#{tmp2}'")
+      log.info("haha 2 '#{tmp2.to_h}'")
+
+      return tmp2.to_h
+
+    end
+
+
     publish :variable => :snapshots, :type => "list <map>"
     publish :variable => :selected_snapshot, :type => "map"
     publish :variable => :id2index, :type => "map <integer, integer>"
@@ -504,14 +509,14 @@ tool can be used to create configurations."))
     publish :function => :ReadSnapshots, :type => "boolean ()"
     publish :function => :LastSnapperErrorMap, :type => "map ()"
     publish :function => :ReadConfigs, :type => "boolean ()"
-    publish :function => :InitializeSnapper, :type => "boolean (string)"
     publish :function => :DeleteSnapshot, :type => "boolean (map)"
     publish :function => :ModifySnapshot, :type => "boolean (map)"
     publish :function => :CreateSnapshot, :type => "boolean (map)"
-    publish :function => :Read, :type => "boolean ()"
+    publish :function => :Init, :type => "boolean ()"
     publish :function => :RestoreFiles, :type => "boolean (integer, list <string>)"
   end
 
   Snapper = SnapperClass.new
   Snapper.main
+
 end

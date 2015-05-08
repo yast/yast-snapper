@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2006-2012 Novell, Inc. All Rights Reserved.
+# Copyright (c) 2006-2015 Novell, Inc. All Rights Reserved.
 #
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -23,10 +23,11 @@
 # Package:	Configuration of snapper
 # Summary:	Dialogs definitions
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
-#
-# $Id$
+
 module Yast
+
   module SnapperDialogsInclude
+
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
 
@@ -45,7 +46,7 @@ module Yast
 
 
     def timestring(t)
-      return Time.at(t).strftime("%F %T")
+      return t.strftime("%F %T")
     end
 
 
@@ -53,37 +54,24 @@ module Yast
       Popup.ReallyAbort(true)
     end
 
+
     # Read settings dialog
     # @return `abort if aborted and `next otherwise
     def ReadDialog
       return :abort if !Confirm.MustBeRoot
 
       Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
-      ret = Snapper.Read
+      ret = Snapper.Init()
       ret ? :next : :abort
     end
 
-    # convert map of userdata to string
-    # $[ "a" : "b", "1" : "2" ] -> "a=b,1=2"
-    def userdata2string(userdata)
-      userdata = deep_copy(userdata)
-      Builtins.mergestring(Builtins.maplist(userdata) do |key, val|
-        Builtins.sformat("%1=%2", key, val)
-      end, ",")
-    end
 
     # transform userdata from widget to map
     def get_userdata(id)
-      u = {}
-      user_s = Convert.to_string(UI.QueryWidget(Id(id), :Value))
-      Builtins.foreach(Builtins.splitstring(user_s, ",")) do |line|
-        split = Builtins.splitstring(line, "=")
-        if Ops.greater_than(Builtins.size(split), 1)
-          Ops.set(u, Ops.get(split, 0, ""), Ops.get(split, 1, ""))
-        end
-      end
-      deep_copy(u)
+      string = Convert.to_string(UI.QueryWidget(Id(id), :Value))
+      return Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value))
     end
+
 
     # generate list of items for Cleanup combo box
     def cleanup_items(current)
@@ -91,6 +79,7 @@ module Yast
         Item(Id(cleanup), cleanup, cleanup == current)
       end
     end
+
 
     # compare editable parts of snapshot maps
     def snapshot_modified(orig, new)
@@ -102,6 +91,7 @@ module Yast
       ) { |key, value| ret = ret || Ops.get(orig, key) != value }
       ret
     end
+
 
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
@@ -134,7 +124,7 @@ module Yast
                 TextEntry(
                   Id(Ops.add(prefix, "userdata")),
                   _("User data"),
-                  userdata2string(Ops.get_map(data, "userdata", {}))
+                  Snapper.userdata_to_string(data["userdata"])
                 ),
                 Left(
                   ComboBox(
@@ -228,6 +218,7 @@ module Yast
 
       modified
     end
+
 
     # Popup for creating new snapshot
     # @return true if new snapshot was created
@@ -342,6 +333,7 @@ module Yast
       created
     end
 
+
     # Popup for deleting existing snapshot
     # @return true if snapshot was deleted
     def DeleteSnapshotPopup(snapshot)
@@ -357,6 +349,7 @@ module Yast
       end
       false
     end
+
 
     # Summary dialog
     # @return dialog result
@@ -382,9 +375,9 @@ module Yast
           num = Ops.get_integer(s, "num", 0)
           date = ""
           if num != 0
-            date = timestring(Ops.get_integer(s, ["date"], 0))
+            date = timestring(s["date"])
           end
-          userdata = userdata2string(Ops.get_map(s, "userdata", {}))
+          userdata = Snapper.userdata_to_string(s["userdata"])
           if Ops.get_symbol(s, "type", :none) == :SINGLE
             snapshot_items = Builtins.add(
               snapshot_items,
@@ -410,7 +403,7 @@ module Yast
               next
             end
             desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
-            pre_date = timestring(Ops.get_integer(Snapper.snapshots, [index, "date"], 0))
+            pre_date = timestring(Snapper.snapshots[index]["date"])
             snapshot_items = Builtins.add(
               snapshot_items,
               Item(
@@ -453,8 +446,7 @@ module Yast
         # busy popup message
         Popup.ShowFeedback("", _("Reading list of snapshots..."))
 
-        Snapper.InitializeSnapper(Snapper.current_config)
-        Snapper.ReadSnapshots
+        Snapper.ReadSnapshots()
         snapshots = deep_copy(Snapper.snapshots)
         Popup.ClearFeedback
 
@@ -582,6 +574,7 @@ module Yast
       deep_copy(ret)
     end
 
+
     # @return dialog result
     def ShowDialog
       # dialog caption
@@ -610,8 +603,8 @@ module Yast
         [pre_index, "description"],
         ""
       )
-      pre_date = timestring(Ops.get_integer(Snapper.snapshots, [pre_index, "date"], 0))
-      date = timestring(Ops.get_integer(snapshot, "date", 0))
+      pre_date = timestring(Snapper.snapshots[pre_index]["date"])
+      date = timestring(snapshot["date"])
       type = Ops.get_symbol(snapshot, "type", :NONE)
       combo_items = []
       Builtins.foreach(Snapper.snapshots) do |s|
@@ -1293,5 +1286,7 @@ module Yast
 
       deep_copy(ret)
     end
+
   end
+
 end

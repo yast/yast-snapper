@@ -28,7 +28,6 @@ License:        GPL-2.0
 
 BuildRequires:	doxygen
 BuildRequires:	gcc-c++
-BuildRequires:	libbtrfs-devel
 BuildRequires:	libsnapper-devel >= 0.2.6
 BuildRequires:	libtool
 BuildRequires:	update-desktop-files
@@ -48,7 +47,7 @@ Summary:	YaST - file system snapshots review
 Url:            http://github.com/yast/yast-snapper/
 
 %description
-YaST module for accessing and managing btrfs system snapshots
+YaST module for accessing and managing file-system snapshots
 
 %prep
 %setup -n %{name}-%{version}

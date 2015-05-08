@@ -43,6 +43,7 @@ int SnapperAgent::getIntValue (const YCPMap &map, const YCPString &key, const in
     return deflt;
 }
 
+
 /**
  * Search the map for value of given key;
  * key is string and value is YCPList
@@ -54,40 +55,6 @@ YCPList SnapperAgent::getListValue (const YCPMap &map, const YCPString &key)
 	return val->asList();
     else
 	return YCPList();
-}
-
-/**
- * Search the map for value of given key;
- * key is string and value is YCPMap
- */
-YCPMap SnapperAgent::getMapValue (const YCPMap &map, const YCPString &key)
-{
-    YCPValue val = map->value(key);
-    if (!val.isNull() && val->isMap())
-        return val->asMap();
-    else
-        return YCPMap();
-}
-
-YCPMap map2ycpmap (const map<string, string>& userdata)
-{
-    YCPMap m;
-    for (map<string, string>::const_iterator it = userdata.begin(); it != userdata.end(); ++it)
-    {
-        m->add (YCPString (it->first), YCPString (it->second));
-    }
-    return m;
-}
-
-map<string, string> ycpmap2stringmap (const YCPMap &ycp_map)
-{
-    map<string, string> m;
-
-    for (YCPMap::const_iterator i = ycp_map->begin(); i != ycp_map->end(); i++) {
-        string key = i->first->asString()->value();
-        m[key]  = i->second->asString()->value();
-    }
-    return m;
 }
 
 
@@ -109,43 +76,12 @@ log_query(LogLevel level, const string& component)
     return should_be_logged(ln[level], component);
 }
 
-// call ioctl to create or delete specific btrfs subvolume
-YCPBoolean btrfs_ioctl_call(string path, int request)
-{
-    if (path.empty()) {
-        y2error ("'path' attribute missing!");
-        return YCPBoolean (false);
-    }
-
-    // find a directory one level up
-    // (FIXME check for path ending with /)
-    string::size_type idx = path.rfind('/');
-    string updir        = path.substr(0, idx);
-    string name         = path.substr(idx + 1);
-
-    int dirfd = open(updir.c_str(), O_RDONLY | O_NOATIME | O_CLOEXEC | O_DIRECTORY);
-    if (dirfd < 0)
-    {
-        y2error("opening directory '%s' failed", updir.c_str());
-        return YCPBoolean (false);
-    }
-
-    struct btrfs_ioctl_vol_args args;
-    memset(&args, 0, sizeof(args));
-    strncpy(args.name, name.c_str(), sizeof(args.name) - 1);
-
-    YCPBoolean ret = YCPBoolean (ioctl(dirfd, request, &args) == 0);
-
-    close(dirfd);
-
-    return ret;
-}
 
 /**
  * Constructor
  */
 SnapperAgent::SnapperAgent()
-    : SCRAgent(), sh(NULL), snapper_initialized(false), snapper_error("")
+    : SCRAgent(), sh(NULL), snapper_initialized(false)
 {
     snapper::setLogDo(&log_do);
     snapper::setLogQuery(&log_query);
@@ -198,66 +134,11 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
     if (!snapper_initialized && PC(0) != "error" && PC(0) != "configs" && PC(0) != "is_subvolume") {
 	y2error ("snapper not initialized: use Execute (.snapper) first!");
-	snapper_error = "not_initialized";
 	return YCPVoid();
     }
 
     if (path->length() == 1) {
 
-        /**
-         * Read (.snapper.is_subvolume, "path/to/dir") -> returns true if given directory is a subvolume
-         */
-        if (PC(0) == "is_subvolume") {
-
-            string path = "";
-            if (arg->isString()) {
-              path      = arg->asString()->value();
-            }
-
-            if (path.empty()) {
-              y2error ("path attribute missing!");
-              return YCPBoolean (false);
-            }
-
-            struct stat status;
-            if (stat(path.c_str(), &status) != 0) {
-              y2error ("status of '%s' cannot be obtained", path.c_str());
-              return YCPBoolean (false);
-            }
-            if (!S_ISDIR(status.st_mode)) {
-              y2error ("'%s' is not a directory", path.c_str());
-              return YCPBoolean (false);
-            }
-
-            // see Btrfs::is_subvolume
-            return YCPBoolean (status.st_ino == 256);
-        }
-	if (PC(0) == "configs") {
-	    YCPList retlist;
-
-	    try {
-		list<ConfigInfo> configs = Snapper::getConfigs("/");
-		for (list<ConfigInfo>::const_iterator it = configs.begin(); it != configs.end(); ++it)
-		{
-		    retlist->add (YCPString (it->getConfigName()));
-		}
-	    }
-	    catch (const ListConfigsFailedException& e)
-	    {
-		y2error("list-configs failed (%s).", e.what());
-		snapper_error	= "sysconfig_not_found";
-		return YCPVoid();
-	    }
-	    return retlist;
-	}
-	/**
-	 * Read (.snapper.error) -> returns last error message
-	 */
-	if (PC(0) == "error") {
-	    YCPMap retmap;
-	    retmap->add (YCPString ("type"), YCPString (snapper_error));
-	    return retmap;
-	}
 	/**
 	 * Read (.snapper.path, $[ "num" : num]) -> returns the path to directory with given snapshot
 	 */
@@ -271,48 +152,6 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 		return ret;
 	    }
 	    return YCPString (snap->snapshotDir());
-	}
-
-	/**
-	 * Read(.snapper.snapshots) -> return list of snapshot description maps
-	 */
-	if (PC(0) == "snapshots") {
-	    YCPList retlist;
-	    const Snapshots& snapshots = sh->getSnapshots();
-	    for (Snapshots::const_iterator it = snapshots.begin(); it != snapshots.end(); ++it)
-	    {
-		YCPMap s;
-
-		switch (it->getType())
-		{
-		    case SINGLE: s->add (YCPString ("type"), YCPSymbol ("SINGLE")); break;
-		    case PRE: s->add (YCPString ("type"), YCPSymbol ("PRE")); break;
-		    case POST: s->add (YCPString ("type"), YCPSymbol ("POST")); break;
-		}
-
-		s->add (YCPString ("num"), YCPInteger (it->getNum()));
-		s->add (YCPString ("date"), YCPInteger (it->getDate()));
-		s->add (YCPString ("description"), YCPString (it->getDescription()));
-
-		if (it->getType() == PRE)
-		{
-                    Snapshots::const_iterator it2 = snapshots.findPost(it);
-                    if (it2 != snapshots.end())
-                    {
-                      s->add (YCPString ("post_num"), YCPInteger (it2->getNum ()));
-                    }
-		}
-		else if (it->getType() == POST)
-		{
-		    s->add (YCPString ("pre_num"), YCPInteger (it->getPreNum()));
-		}
-                s->add (YCPString ("userdata"), YCPMap (map2ycpmap (it->getUserdata())));
-                s->add (YCPString ("cleanup"), YCPString (it->getCleanup ()));
-
-		y2debug ("snapshot %s", s.toString().c_str());
-		retlist->add (s);
-	    }
-	    return retlist;
 	}
 
 	unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
@@ -444,14 +283,12 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	catch (const ConfigNotFoundException& e)
 	{
 	    y2error ("Config not found.");
-	    snapper_error	= "config_not_found";
 	    sh			= NULL;
 	    return YCPBoolean (false);
 	}
 	catch (const InvalidConfigException& e)
 	{
 	    y2error ("Config is invalid.");
-	    snapper_error	= "config_invalid";
 	    sh			= NULL;
 	    return YCPBoolean (false);
 	}
@@ -461,157 +298,16 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 
     if (path->length() == 1) {
 
-	if (PC(0) == "create_config")
-	{
-	    string config_name = getValue(argmap, YCPString("config_name"), "root");
-	    string subvolume = getValue(argmap, YCPString("subvolume"), "");
-	    string fstype = getValue(argmap, YCPString("fstype"), "");
-	    string template_name = getValue(argmap, YCPString("template_name"), "default");
-
-	    try
-	    {
-		Snapper::createConfig(config_name, "/", subvolume, fstype, template_name);
-	    }
-	    catch (const CreateConfigFailedException& e)
-	    {
-		y2error("create-config failed (%s).", e.what());
-		return YCPBoolean (false);
-	    }
-
-	    return ret;
-	}
-        /**
-         * Execute(.snapper.delete_config, $[ "config_name" : name $] -> deletes given configuration
-         */
-        if (PC(0) == "delete_config") {
-
-            string name = getValue(argmap, YCPString("config_name"), "");
-
-            if (name.empty()) {
-              y2error ("'config_name' attribute missing!");
-              return YCPBoolean (false);
-            }
-
-            try
-            {
-		Snapper::deleteConfig(name, "/");
-            }
-            catch (const ConfigNotFoundException& e)
-            {
-              y2error("deleting config '%s' failed (%s).", name.c_str(), e.what());
-              return YCPBoolean (false);
-            }
-            catch (const DeleteConfigFailedException& e)
-            {
-              y2error("deleting config '%s' failed (%s).", name.c_str(), e.what());
-              return YCPBoolean (false);
-            }
-            return ret;
-        }
-
         // previous operations do not need initialization
         if (!snapper_initialized) {
           y2error ("snapper not initialized: use Execute (.snapper) first!");
-          snapper_error = "not_initialized";
           return YCPVoid();
-        }
-
-	if (PC(0) == "create") {
-
-	    string type = getValue (argmap, YCPString ("type"), "single");
-
-	    SCD scd;
-	    scd.uid = getuid();
-	    scd.description = getValue(argmap, YCPString("description"), "");
-	    scd.cleanup = getValue(argmap, YCPString("cleanup"), "");
-	    scd.userdata = ycpmap2stringmap(getMapValue(argmap, YCPString("userdata")));
-
-            const Snapshots& snapshots          = sh->getSnapshots();
-
-            if (type == "single") {
-		sh->createSingleSnapshot(scd);
-            }
-            else if (type == "pre") {
-		sh->createPreSnapshot(scd);
-	    }
-            else if (type == "post") {
-                // check if pre was given!
-                int pre = getIntValue (argmap, YCPString ("pre"), -1);
-                if (pre == -1)
-                {
-                    snapper_error       = "pre_not_given";
-                    return YCPBoolean (false);
-                }
-                else
-                {
-                    Snapshots::const_iterator snap1 = snapshots.find (pre);
-                    if (snap1 == snapshots.end())
-                    {
-                        snapper_error   = "pre_not_found";
-                        return YCPBoolean (false);
-                    }
-                    else
-                    {
-			sh->createPostSnapshot(snap1, scd);
-                    }
-                }
-            }
-            else {
-                snapper_error   = "wrong_snapshot_type";
-                return YCPBoolean (false);
-            }
-
-            return ret;
-        }
-        else if (PC(0) == "modify") {
-
-            int num     = getIntValue (argmap, YCPString ("num"), 0);
-
-            Snapshots& snapshots = sh->getSnapshots();
-            Snapshots::iterator snap = snapshots.find(num);
-            if (snap == snapshots.end())
-            {
-                y2error ("snapshot '%d' not found", num);
-                snapper_error   = "snapshot_not_found";
-                return YCPBoolean (false);
-            }
-
-	    SMD smd;
-
-	    smd.description = argmap->hasKey(YCPString("description")) ?
-		getValue(argmap, YCPString("description"), "") : snap->getDescription();
-
-	    smd.cleanup = argmap->hasKey(YCPString("cleanup")) ?
-		getValue(argmap, YCPString("cleanup"), "") : snap->getCleanup();
-
-	    smd.userdata = argmap->hasKey(YCPString("userdata")) ?
-		ycpmap2stringmap(getMapValue(argmap, YCPString("userdata"))) : snap->getUserdata();
-
-	    sh->modifySnapshot(snap, smd);
-
-            return ret;
-        }
-        else if (PC(0) == "delete") {
-
-            int num     = getIntValue (argmap, YCPString ("num"), 0);
-
-            Snapshots& snapshots = sh->getSnapshots();
-            Snapshots::iterator snap = snapshots.find(num);
-
-            if (snap == snapshots.end())
-            {
-                snapper_error   = "not_found";
-                return YCPBoolean (false);
-            }
-
-            sh->deleteSnapshot(snap);
-            return ret;
         }
 
 	/**
 	 * Rollback the list of given files from snapshot num1 to num2 (system by default)
 	 */
-        else if (PC(0) == "rollback") {
+        if (PC(0) == "rollback") {
 
 	    unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
 	    unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
@@ -640,26 +336,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
 	    return ret;
 	}
 
-    }
-    else if (path->length() == 2 && PC(0) == "subvolume") {
-
-        // create new subvolume; argument 'path' must be provided
-        if (PC(1) == "create")
-        {
-            return btrfs_ioctl_call(
-                getValue(argmap, YCPString("path"), ""),
-                BTRFS_IOC_SUBVOL_CREATE
-            );
-        }
-        // delete existing subvolume; argument 'path' must be provided
-        // (delete_config must be called before subvolume.delete)
-        else if (PC(1) == "delete") {
-
-            return btrfs_ioctl_call(
-                getValue(argmap, YCPString("path"), ""),
-                BTRFS_IOC_SNAP_DESTROY
-            );
-        }
     }
     else {
 	y2error("Wrong path '%s' in Execute().", path->toString().c_str());

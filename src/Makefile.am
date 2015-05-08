@@ -1,7 +1,8 @@
 # Sources for snapper
 
 module_DATA = \
-  modules/Snapper.rb
+  modules/Snapper.rb \
+  modules/SnapperDbus.rb
 
 client_DATA = \
   clients/snapper.rb
