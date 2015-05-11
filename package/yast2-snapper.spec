@@ -35,6 +35,7 @@ BuildRequires:	yast2
 BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	yast2-devtools >= 3.1.10
 BuildRequires:	yast2-testsuite
+BuildRequires:  rubygem(rspec)
 BuildRequires:	rubygem(ruby-dbus)
 
 Requires:	yast2 >= 2.21.22
