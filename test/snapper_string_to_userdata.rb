@@ -31,4 +31,11 @@ describe "Snapper#string_to_userdata" do
   end
 
 
+  it "call with complex string and space after comma" do
+
+    expect(Yast::Snapper.string_to_userdata("a=1, b=2")).to eq({ "a" => "1", "b" => "2" })
+
+  end
+
+
 end

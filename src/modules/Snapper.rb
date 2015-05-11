@@ -482,7 +482,7 @@ tool can be used to create configurations."))
       tmp1 = string.split(",")
 
       tmp2 = tmp1.map do |s|
-        s.split("=", 2)
+        s.split("=", 2).map { |t| t.strip }
       end
 
       # TODO, check for = sign, trim
