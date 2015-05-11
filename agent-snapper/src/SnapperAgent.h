@@ -50,13 +50,8 @@ private:
      */
     int getIntValue ( const YCPMap &map, const YCPString &key, const int deflt);
 
-    /**
-     * Search the map for value of given key;
-     * key is string and value is YCPList
-     */
-    YCPList getListValue (const YCPMap &map, const YCPString &key);
-
 public:
+
     /**
      * Default constructor.
      */

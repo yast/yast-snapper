@@ -84,20 +84,18 @@ module Yast
       )
     end
 
+
     # Return the path to given snapshot
     def GetSnapshotPath(snapshot_num)
-      ret = Convert.to_string(
-        SCR.Read(path(".snapper.path"), { "num" => snapshot_num })
-      )
-      if ret == nil
-        ret = ""
-        # popup error
-        Report.Error(
-          Builtins.sformat(_("Snapshot '%1' was not found."), snapshot_num)
-        )
-      end
-      ret
+
+      return SnapperDbus.get_mount_point(@current_config, snapshot_num)
+
+    rescue Exception => e
+      Report.Error(_("Failed to get snapshot mount point:" + "\n" + e.message))
+      return ""
+
     end
+
 
     # Return the full path to the given file from currently selected configuration (subvolume)
     # @param [String] file path, relatively to current config

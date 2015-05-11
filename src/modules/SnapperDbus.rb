@@ -137,7 +137,7 @@ module Yast
 
       log.info("delete_snapshots config_name:#{config_name} nums:#{nums}")
 
-      result = @dbus_object.DeleteSnapshots(config_name, nums)
+      result = @dbus_object.DeleteSnapshots(config_name, nums).first()
       log.info("delete_snapshots result:#{result}")
 
       ret = result
@@ -160,6 +160,22 @@ module Yast
       ret = result
 
       log.info("set_snapshot ret:#{ret}")
+
+      return ret
+
+    end
+
+
+    def get_mount_point(config_name, num)
+
+      log.info("get_mount_point config_name:#{config_name} num:#{num}")
+
+      result = @dbus_object.GetMountPoint(config_name, num).first()
+      log.info("get_mount_point result:#{result}")
+
+      ret = result
+
+      log.info("get_mount_point ret:#{ret}")
 
       return ret
 

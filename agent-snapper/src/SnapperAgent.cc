@@ -44,20 +44,6 @@ int SnapperAgent::getIntValue (const YCPMap &map, const YCPString &key, const in
 }
 
 
-/**
- * Search the map for value of given key;
- * key is string and value is YCPList
- */
-YCPList SnapperAgent::getListValue (const YCPMap &map, const YCPString &key)
-{
-    YCPValue val = map->value(key);
-    if (!val.isNull() && val->isList())
-	return val->asList();
-    else
-	return YCPList();
-}
-
-
 void
 log_do(LogLevel level, const string& component, const char* file, const int line, const char* func,
        const string& text)
@@ -139,43 +125,9 @@ YCPValue SnapperAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPV
 
     if (path->length() == 1) {
 
-	/**
-	 * Read (.snapper.path, $[ "num" : num]) -> returns the path to directory with given snapshot
-	 */
-	if (PC(0) == "path") {
-	    unsigned int num    = getIntValue (argmap, YCPString ("num"), 0);
-	    const Snapshots& snapshots = sh->getSnapshots();
-	    Snapshots::const_iterator snap = snapshots.find(num);
-	    if (snap == snapshots.end())
-	    {
-		y2error ("snapshot '%d' not found", num);
-		return ret;
-	    }
-	    return YCPString (snap->snapshotDir());
-	}
-
 	unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
 	unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
 
-	/**
-	 * Read(.snapper.diff_list) -> show difference between snapshots num1 and num2 as list.
-	 */
-	if (PC(0) == "diff_list") {
-	    YCPList retlist;
-
-	    const Snapshots& snapshots = sh->getSnapshots();
-	    const Comparison comparison(sh, snapshots.find(num1), snapshots.find(num2));
-	    const Files& files = comparison.getFiles();
-
-	    for (Files::const_iterator it = files.begin(); it != files.end(); ++it)
-	    {
-		YCPMap filemap;
-		filemap->add (YCPString ("name"), YCPString (it->getName()));
-		filemap->add (YCPString ("changes"), YCPString (statusToString (it->getPreToPostStatus())));
-		retlist->add (filemap);
-	    }
-	    return retlist;
-	}
 	/**
 	 * Read(.snapper.diff_index) -> show difference between snapshots num1 and num2 as one-level map:
 	 * (mapping each file to its changes)
@@ -303,38 +255,6 @@ YCPValue SnapperAgent::Execute(const YCPPath &path, const YCPValue& arg,
           y2error ("snapper not initialized: use Execute (.snapper) first!");
           return YCPVoid();
         }
-
-	/**
-	 * Rollback the list of given files from snapshot num1 to num2 (system by default)
-	 */
-        if (PC(0) == "rollback") {
-
-	    unsigned int num1	= getIntValue (argmap, YCPString ("from"), 0);
-	    unsigned int num2	= getIntValue (argmap, YCPString ("to"), 0);
-	    const Snapshots& snapshots = sh->getSnapshots();
-	    Comparison comparison(sh, snapshots.find(num1), snapshots.find(num2));
-	    Files& files = comparison.getFiles();
-
-	    YCPList selected = getListValue (argmap, YCPString ("files"));
-	    for (int i=0; i < selected->size(); i++) {
-		if (selected.value(i)->isString())
-		{
-		    string name = selected->value(i)->asString()->value();
-		    y2debug ("file to rollback: %s", name.c_str());
-		    Files::iterator it = files.find(name);
-		    if (it == files.end())
-		    {
-			y2error ("file %s not found in diff", name.c_str());
-		    }
-		    else
-		    {
-			it->setUndo(true);
-			it->doUndo();
-		    }
-		}
-	    }
-	    return ret;
-	}
 
     }
     else {
