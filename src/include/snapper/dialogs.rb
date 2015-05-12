@@ -575,6 +575,30 @@ module Yast
     end
 
 
+    def icon_for_status(status)
+      if status & 0x01
+        return "16x16/apps/gdu-smart-healthy.png"
+      elsif status & 0x02
+        return "16x16/apps/gdu-smart-failing.png"
+      else
+        return "16x16/apps/gdu-smart-unknown.png"
+      end
+    end
+
+
+    def generate_ui_file_tree(subtree)
+      return subtree.children.map do |file|
+        if file.status != 0
+          Item(Id("file-#{file.fullname}"), term(:icon, icon_for_status(file.status)),
+               "#{file.name}", false, generate_ui_file_tree(file))
+        else
+          Item(Id("file-#{file.fullname}"),
+               "#{file.name}", false, generate_ui_file_tree(file))
+        end
+      end
+    end
+
+
     # @return dialog result
     def ShowDialog
       # dialog caption
@@ -639,8 +663,6 @@ module Yast
 
       files_tree = Snapper.ReadModifiedFilesTree(from, to)
 
-      files_tree.each { |e| Builtins.y2milestone("haha #{e.fullname}  #{e.name}  #{e.status}") }
-
 
       #if !Builtins.haskey(snapshot, "tree_map")
       #  Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
@@ -675,64 +697,13 @@ module Yast
           1
         ) == "+"
       end
+
       file_was_removed = lambda do |file|
         Builtins.substring(
           Ops.get_string(files_index, [file, "status"], ""),
           0,
           1
         ) == "-"
-      end
-
-      # go through the map defining filesystem tree and create the widget items
-      generate_tree_items = lambda do |current_path, current_branch|
-        current_branch = deep_copy(current_branch)
-        ret2 = []
-        Builtins.foreach(current_branch) do |node, branch|
-          new_path = Ops.add(Ops.add(current_path, "/"), node)
-          if Builtins.haskey(files_index, new_path)
-            icon_f = "16x16/apps/gdu-smart-unknown.png"
-            if file_was_created.call(new_path)
-              icon_f = "16x16/apps/gdu-smart-healthy.png"
-            elsif file_was_removed.call(new_path)
-              icon_f = "16x16/apps/gdu-smart-failing.png"
-            end
-            ret2 = Builtins.add(
-              ret2,
-              Item(
-                Id(new_path),
-                term(:icon, icon_f),
-                node,
-                false,
-                generate_tree_items.call(
-                  new_path,
-                  Convert.convert(
-                    branch,
-                    :from => "map",
-                    :to   => "map <string, map>"
-                  )
-                )
-              )
-            )
-          else
-            ret2 = Builtins.add(
-              ret2,
-              Item(
-                Id(new_path),
-                node,
-                false,
-                generate_tree_items.call(
-                  new_path,
-                  Convert.convert(
-                    branch,
-                    :from => "map",
-                    :to   => "map <string, map>"
-                  )
-                )
-              )
-            )
-          end
-        end
-        deep_copy(ret2)
       end
 
       # helper function: show the specific modification between snapshots
@@ -1112,9 +1083,9 @@ module Yast
         _("Restore Selected")
       )
 
-      tree_items = generate_tree_items.call("", tree_map)
+      tree_items = generate_ui_file_tree(files_tree)
 
-      if Ops.greater_than(Builtins.size(tree_items), 0)
+      if !tree_items.empty?
         UI.ReplaceWidget(
           Id(:reptree),
           VBox(
