@@ -13,9 +13,6 @@ ynclude_DATA = \
   include/snapper/dialogs.rb \
   include/snapper/helps.rb
 
-scrconf_DATA = \
-  scrconf/snapper.scr
-
 desktop_DATA = \
   desktop/snapper.desktop
 
