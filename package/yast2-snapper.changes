@@ -2,6 +2,7 @@
 Tue May 12 12:44:42 CEST 2015 - aschnell@suse.de
 
 - use DBus interface instead of libsnapper (fate#316647)
+- use status icons from yast2-branding
 - 3.1.7
 
 -------------------------------------------------------------------

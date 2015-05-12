@@ -28,6 +28,9 @@ module Yast
 
   module SnapperDialogsInclude
 
+    include Yast::Logger
+
+
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
 
@@ -575,25 +578,13 @@ module Yast
     end
 
 
-    def icon_for_status(status)
-      if status & 0x01
-        return "16x16/apps/gdu-smart-healthy.png"
-      elsif status & 0x02
-        return "16x16/apps/gdu-smart-failing.png"
-      else
-        return "16x16/apps/gdu-smart-unknown.png"
-      end
-    end
-
-
     def generate_ui_file_tree(subtree)
       return subtree.children.map do |file|
         if file.status != 0
-          Item(Id("file-#{file.fullname}"), term(:icon, icon_for_status(file.status)),
-               "#{file.name}", false, generate_ui_file_tree(file))
+          Item(Id(file.fullname), term(:icon, file.icon), file.name,
+               false, generate_ui_file_tree(file))
         else
-          Item(Id("file-#{file.fullname}"),
-               "#{file.name}", false, generate_ui_file_tree(file))
+          Item(Id(file.fullname), file.name, false, generate_ui_file_tree(file))
         end
       end
     end
@@ -606,8 +597,10 @@ module Yast
 
       display_info = UI.GetDisplayInfo
       textmode = Ops.get_boolean(display_info, "TextMode", false)
-      previous_file = ""
-      current_file = ""
+
+      previous_filename = ""
+      current_filename = ""
+      current_file = nil
 
       # map of already read files
       files = {}
@@ -660,9 +653,8 @@ module Yast
 
       # busy popup message
       Popup.ShowFeedback("", _("Calculating changed files..."))
-
       files_tree = Snapper.ReadModifiedFilesTree(from, to)
-
+      Popup.ClearFeedback()
 
       #if !Builtins.haskey(snapshot, "tree_map")
       #  Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
@@ -679,7 +671,6 @@ module Yast
       #  Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
       #end
 
-      Popup.ClearFeedback
       files_index = Ops.get_map(snapshot, "files_index", {})
 
       # update the global snapshots list
@@ -690,28 +681,12 @@ module Yast
       # map of all items in tree (just one level)
       selected_items = {}
 
-      file_was_created = lambda do |file|
-        Builtins.substring(
-          Ops.get_string(files_index, [file, "status"], ""),
-          0,
-          1
-        ) == "+"
-      end
-
-      file_was_removed = lambda do |file|
-        Builtins.substring(
-          Ops.get_string(files_index, [file, "status"], ""),
-          0,
-          1
-        ) == "-"
-      end
-
       # helper function: show the specific modification between snapshots
       show_file_modification = lambda do |file, from2, to2|
         content = VBox()
         # busy popup message
         Popup.ShowFeedback("", _("Calculating file modifications..."))
-        modification = Snapper.GetFileModification(file, from2, to2)
+        modification = Snapper.GetFileModification(file.fullname, from2, to2)
         Popup.ClearFeedback
         status = Ops.get_list(modification, "status", [])
         if Builtins.contains(status, "created")
@@ -819,7 +794,7 @@ module Yast
         # button label
         restore_label_single = _("Restore")
 
-        if file_was_created.call(file)
+        if file.created?
           restore_label = Label.RemoveButton
           restore_label_single = Label.RemoveButton
         end
@@ -848,7 +823,7 @@ module Yast
             HSpacing(0.5)
           )
         )
-        if type != :SINGLE && file_was_removed.call(file)
+        if type != :SINGLE && file.deleted?
           # file removed in 2nd snapshot cannot be restored from that snapshot
           UI.ChangeWidget(Id(:restore), :Enabled, false)
         end
@@ -859,7 +834,7 @@ module Yast
 
       # create the term for selected file
       set_entry_term = lambda do
-        if current_file != "" && Builtins.haskey(files_index, current_file)
+        if current_file
           if type == :SINGLE
             UI.ReplaceWidget(
               Id(:diff_chooser),
@@ -973,11 +948,7 @@ module Yast
                 HSpacing(0.5)
               )
             )
-            show_file_modification.call(
-              current_file,
-              previous_num,
-              snapshot_num
-            )
+            show_file_modification.call(current_file, previous_num, snapshot_num)
           end
         else
           UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
@@ -1102,7 +1073,7 @@ module Yast
         UI.ChangeWidget(:tree, :CurrentItem, nil)
       end
 
-      current_file = ""
+      current_filename = ""
 
       set_entry_term.call
 
@@ -1113,16 +1084,23 @@ module Yast
         event = UI.WaitForEvent
         ret = Ops.get_symbol(event, "ID")
 
-        previous_file = current_file
-        current_file = Convert.to_string(
-          UI.QueryWidget(Id(:tree), :CurrentItem)
-        )
-        current_file = "" if current_file == nil
+        previous_filename = current_filename
+        current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
+        current_filename = "" if current_filename == nil
+        log.info("haha current_filename:#{current_filename}")
+
+        if current_filename.empty?
+          current_file = nil
+        else
+          current_file = files_tree.find(current_filename[1..-1])
+          log.info("haha current_file.fullname:#{current_file.fullname} "\
+                   "current_file.status:#{current_file.status}")
+        end
 
         # other tree events
         if ret == :tree
           # seems like tree widget emits 2 SelectionChanged events
-          if current_file != previous_file
+          if current_filename != previous_filename
             set_entry_term.call
             UI.SetFocus(Id(:tree)) if textmode
           end
@@ -1131,11 +1109,7 @@ module Yast
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
             show_file_modification.call(current_file, snapshot_num, 0)
           else
-            show_file_modification.call(
-              current_file,
-              previous_num,
-              snapshot_num
-            )
+            show_file_modification.call(current_file, previous_num, snapshot_num)
           end
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
           UI.ChangeWidget(Id(:selection_snapshots), :Enabled, true)
@@ -1150,7 +1124,7 @@ module Yast
         elsif ret == :abort || ret == :cancel || ret == :back
           break
         elsif (ret == :restore_pre || ret == :restore && type == :SINGLE) &&
-            file_was_created.call(current_file)
+            current_file.created?
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
               Builtins.sformat(
@@ -1161,12 +1135,12 @@ module Yast
                     "\n" +
                     "from current system?"
                 ),
-                Snapper.GetFileFullPath(current_file)
+                Snapper.GetFileFullPath(current_filename)
               )
             )
             Snapper.RestoreFiles(
               ret == :restore_pre ? previous_num : snapshot_num,
-              [current_file]
+              [current_filename]
             )
           end
           next
@@ -1181,11 +1155,11 @@ module Yast
                     "\n" +
                     "from snapshot '%2' to current system?"
                 ),
-                Snapper.GetFileFullPath(current_file),
+                Snapper.GetFileFullPath(current_filename),
                 previous_num
               )
             )
-            Snapper.RestoreFiles(previous_num, [current_file])
+            Snapper.RestoreFiles(previous_num, [current_filename])
           end
           next
         elsif ret == :restore
@@ -1199,11 +1173,11 @@ module Yast
                     "\n" +
                     "from snapshot '%2' to current system?"
                 ),
-                Snapper.GetFileFullPath(current_file),
+                Snapper.GetFileFullPath(current_filename),
                 snapshot_num
               )
             )
-            Snapper.RestoreFiles(snapshot_num, [current_file])
+            Snapper.RestoreFiles(snapshot_num, [current_filename])
           end
           next
         elsif ret == :next

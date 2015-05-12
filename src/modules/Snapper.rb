@@ -34,6 +34,8 @@ module Yast
 
   class Tree
 
+    # TODO inconsistent whether leading / in part of filename (e.g. in add and find)
+
     attr_accessor :name, :status
     attr_reader :children
 
@@ -57,6 +59,27 @@ module Yast
 
     def fullname()
       return @parent ? @parent.fullname() + "/" + @name : @name
+    end
+
+    def created?()
+      return @status & 0x01 != 0
+    end
+
+    def deleted?()
+      return @status & 0x02 != 0
+    end
+
+
+    def icon()
+      if @status == 0
+        return "yast-gray-dot.png"
+      elsif created?
+        return "yast-green-dot.png"
+      elsif deleted?
+        return "yast-red-dot.png"
+      else
+        return "yast-yellow-dot.png"
+      end
     end
 
 
@@ -83,6 +106,26 @@ module Yast
       end
 
     end
+
+
+    def find(fullname)
+
+      a, b = fullname.split("/", 2)
+
+      i = @children.index{ |x| x.name == a }
+
+      if !i
+        return nil
+      end
+
+      if !b
+        return @children[i]
+      else
+        return @children[i].find(b)
+      end
+
+    end
+
 
   end
 
