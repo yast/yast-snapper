@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May 12 12:44:42 CEST 2015 - aschnell@suse.de
+
+- use DBus interface instead of libsnapper (fate#316647)
+- 3.1.7
+
+-------------------------------------------------------------------
 Mon Feb 16 12:10:50 CET 2015 - aschnell@suse.de
 
 - adapted to changes in snapper
