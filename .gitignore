@@ -28,3 +28,4 @@ package/*.bz2
 tmp.*
 *.log
 *.ybc
+test-driver
