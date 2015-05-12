@@ -637,20 +637,26 @@ module Yast
       # busy popup message
       Popup.ShowFeedback("", _("Calculating changed files..."))
 
-      if !Builtins.haskey(snapshot, "tree_map")
-        Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
-        tree_map = Ops.get_map(snapshot, "tree_map", {})
-      end
+      files_tree = Snapper.ReadModifiedFilesTree(from, to)
+
+      files_tree.each { |e| Builtins.y2milestone("haha #{e.fullname}  #{e.name}  #{e.status}") }
+
+
+      #if !Builtins.haskey(snapshot, "tree_map")
+      #  Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
+      #  tree_map = Ops.get_map(snapshot, "tree_map", {})
+      #end
       # full paths of files marked as modified, mapping to changes string
       files_index = {}
-      if !Builtins.haskey(snapshot, "files_index")
-        Ops.set(
-          snapshot,
-          "files_index",
-          Snapper.ReadModifiedFilesIndex(from, to)
-        )
-        Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
-      end
+      #if !Builtins.haskey(snapshot, "files_index")
+      #  Ops.set(
+      #    snapshot,
+      #    "files_index",
+      #    Snapper.ReadModifiedFilesIndex(from, to)
+      #  )
+      #  Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
+      #end
+
       Popup.ClearFeedback
       files_index = Ops.get_map(snapshot, "files_index", {})
 
@@ -676,6 +682,7 @@ module Yast
           1
         ) == "-"
       end
+
       # go through the map defining filesystem tree and create the widget items
       generate_tree_items = lambda do |current_path, current_branch|
         current_branch = deep_copy(current_branch)

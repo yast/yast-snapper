@@ -31,6 +31,62 @@ require "yast"
 
 module Yast
 
+
+  class Tree
+
+    attr_accessor :name, :status
+    attr_reader :children
+
+    def initialize(name, parent)
+      @name = name
+      @status = 0
+      @parent = parent
+      @children = []
+    end
+
+    def each()
+      if @parent != nil
+        yield self
+      end
+      @children.each do |subtree|
+        subtree.each do |e|
+          yield e
+        end
+      end
+    end
+
+    def fullname()
+      return @parent ? @parent.fullname() + "/" + @name : @name
+    end
+
+
+    def add(fullname, status)
+
+      a, b = fullname.split("/", 2)
+
+      i = @children.index{ |x| x.name == a }
+
+      if i
+        if b
+          @children[i].add(b, status)
+        else
+          @children[i].status = status
+        end
+      else
+        subtree = Tree.new(a, self)
+        if b
+          subtree.add(b, status)
+        else
+          subtree.status = status
+        end
+        @children << subtree
+      end
+
+    end
+
+  end
+
+
   class SnapperClass < Module
 
     include Yast::Logger
@@ -64,24 +120,23 @@ module Yast
 
     end
 
-    # Return map of files modified between given snapshots
-    # Return structure has just one level, and maps each modified file to it's modification map
-    def ReadModifiedFilesIndex(from, to)
-      Convert.convert(
-        SCR.Read(path(".snapper.diff_index"), { "from" => from, "to" => to }),
-        :from => "any",
-        :to   => "map <string, map>"
-      )
-    end
 
-    # Return map of files modified between given snapshots
+    # Return Tree of files modified between given snapshots
     # Map is recursively describing the filesystem structure; helps to build Tree widget contents
-    def ReadModifiedFilesMap(from, to)
-      Convert.convert(
-        SCR.Read(path(".snapper.diff_tree"), { "from" => from, "to" => to }),
-        :from => "any",
-        :to   => "map <string, map>"
-      )
+    def ReadModifiedFilesTree(from, to)
+
+      SnapperDbus.create_comparison(@current_config, from, to)
+      files = SnapperDbus.get_files(@current_config, from, to)
+      SnapperDbus.delete_comparison(@current_config, from, to)
+
+      root = Tree.new("", nil)
+
+      files.each do |file|
+        root.add(file["filename"][1..-1], file["status"])
+      end
+
+      return root
+
     end
 
 
@@ -483,7 +538,7 @@ tool can be used to create configurations."))
         s.split("=", 2).map { |t| t.strip }
       end
 
-      # TODO, check for = sign, trim
+      # TODO, check for = sign
 
       log.info("haha 1 '#{tmp1}' '#{tmp2}'")
       log.info("haha 2 '#{tmp2.to_h}'")
@@ -499,8 +554,6 @@ tool can be used to create configurations."))
     publish :variable => :selected_snapshot_index, :type => "integer"
     publish :variable => :configs, :type => "list <string>"
     publish :variable => :current_config, :type => "string"
-    publish :function => :ReadModifiedFilesIndex, :type => "map <string, map> (integer, integer)"
-    publish :function => :ReadModifiedFilesMap, :type => "map <string, map> (integer, integer)"
     publish :function => :GetSnapshotPath, :type => "string (integer)"
     publish :function => :GetFileFullPath, :type => "string (string)"
     publish :function => :GetFileModification, :type => "map (string, integer, integer)"

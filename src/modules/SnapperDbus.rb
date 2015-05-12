@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2015 Novell, Inc. All Rights Reserved.
+# Copyright (c) 2015 SUSE LLC. All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of version 2 of the GNU General Public License as published by the
@@ -181,6 +181,49 @@ module Yast
 
     end
 
+
+    def create_comparison(config_name, num1, num2)
+
+      log.info("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2}")
+
+      result = @dbus_object.CreateComparison(config_name, num1, num2).first()
+      log.info("create_comparison result:#{result}")
+
+      ret = result
+
+      log.info("create_comparison ret:#{ret}")
+
+      return ret
+
+    end
+
+
+    def delete_comparison(config_name, num1, num2)
+
+      log.info("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2}")
+
+      result = @dbus_object.DeleteComparison(config_name, num1, num2).first()
+      log.info("delete_comparison result:#{result}")
+
+    end
+
+
+    def get_files(config_name, num1, num2)
+
+      log.info("get_files config_name:#{config_name} num1:#{num1} num2:#{num2}")
+
+      result = @dbus_object.GetFiles(config_name, num1, num2).first()
+      log.info("get_files result:#{result}")
+
+      ret = result.map { |file|
+        { "filename" => file[0], "status" => file[1] }
+      }
+
+      log.info("get_files ret:#{ret}")
+
+      return ret
+
+    end
 
   end
 
