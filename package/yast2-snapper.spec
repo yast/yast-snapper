@@ -67,6 +67,4 @@ YaST module for accessing and managing file-system snapshots
 %{yast_moduledir}/Snapper.rb
 %{yast_moduledir}/SnapperDbus.rb
 %{yast_desktopdir}/snapper.desktop
-%{yast_scrconfdir}/*.scr
-%{yast_plugindir}/libpy2ag_snapper*
 %doc %{yast_docdir}
