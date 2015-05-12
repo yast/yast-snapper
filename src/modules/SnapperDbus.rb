@@ -28,6 +28,9 @@ module Yast
     include Yast::Logger
 
 
+    # TODO reduce logging
+
+
     def main
 
       log.info("connecting to snapperd")

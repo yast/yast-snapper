@@ -23,8 +23,6 @@
 # Summary:	Snapper settings, input and output functions
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
 #
-# $Id$
-#
 # Representation of the configuration of snapper.
 # Input and output routines.
 require "yast"
@@ -601,7 +599,6 @@ tool can be used to create configurations."))
     publish :function => :GetFileFullPath, :type => "string (string)"
     publish :function => :GetFileModification, :type => "map (string, integer, integer)"
     publish :function => :ReadSnapshots, :type => "boolean ()"
-    publish :function => :LastSnapperErrorMap, :type => "map ()"
     publish :function => :ReadConfigs, :type => "boolean ()"
     publish :function => :DeleteSnapshot, :type => "boolean (map)"
     publish :function => :ModifySnapshot, :type => "boolean (map)"

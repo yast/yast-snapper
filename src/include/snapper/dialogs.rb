@@ -581,12 +581,35 @@ module Yast
     def generate_ui_file_tree(subtree)
       return subtree.children.map do |file|
         if file.status != 0
-          Item(Id(file.fullname), term(:icon, file.icon), file.name,
-               false, generate_ui_file_tree(file))
+          Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
+               generate_ui_file_tree(file))
         else
           Item(Id(file.fullname), file.name, false, generate_ui_file_tree(file))
         end
       end
+    end
+
+
+    def format_diff(diff, textmode)
+      lines = Builtins.splitstring(String.EscapeTags(diff), "\n")
+      if !textmode
+        # colorize diff output
+        lines.map! do |line|
+          case line[0]
+          when "+"
+            line = "<font color=blue>#{line}</font>"
+          when "-"
+            line = "<font color=red>#{line}</font>"
+          end
+          line
+        end
+      end
+      ret = lines.join("<br>")
+      if !textmode
+        # show fixed font in diff
+        ret = "<pre>" + ret + "</pre>"
+      end
+      return ret
     end
 
 
@@ -765,26 +788,8 @@ module Yast
         end
 
         if Builtins.haskey(modification, "diff")
-          diff = String.EscapeTags(Ops.get_string(modification, "diff", ""))
-          l = Builtins.splitstring(diff, "\n")
-          if !textmode
-            # colorize diff output
-            l = Builtins.maplist(l) do |line|
-              first = Builtins.substring(line, 0, 1)
-              if first == "+"
-                line = Builtins.sformat("<font color=blue>%1</font>", line)
-              elsif first == "-"
-                line = Builtins.sformat("<font color=red>%1</font>", line)
-              end
-              line
-            end
-          end
-          diff = Builtins.mergestring(l, "<br>")
-          if !textmode
-            # show fixed font in diff
-            diff = Ops.add(Ops.add("<pre>", diff), "</pre>")
-          end
-          content = Builtins.add(content, RichText(Id(:diff), diff))
+          content = Builtins.add(content, RichText(Id(:diff),
+            format_diff(Ops.get_string(modification, "diff", ""), textmode)))
         else
           content = Builtins.add(content, VStretch())
         end
