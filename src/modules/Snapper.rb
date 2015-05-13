@@ -406,9 +406,9 @@ module Yast
 
     # Delete existing snapshot
     # Return true on success
-    def DeleteSnapshot(args)
+    def DeleteSnapshot(nums)
 
-      SnapperDbus.delete_snapshots(@current_config, [ args["num"] ])
+      SnapperDbus.delete_snapshots(@current_config, nums)
 
       return true
 

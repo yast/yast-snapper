@@ -3,6 +3,8 @@ Tue May 12 12:44:42 CEST 2015 - aschnell@suse.de
 
 - use DBus interface instead of libsnapper (fate#316647)
 - use status icons from yast2-branding
+- delete pre and post snapshot when selecting delete a pre post
+  pair
 - 3.1.7
 
 -------------------------------------------------------------------

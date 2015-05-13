@@ -101,10 +101,10 @@ module Yast
       snapshot = deep_copy(snapshot)
       modified = false
       num = Ops.get_integer(snapshot, "num", 0)
-      previous_num = Ops.get_integer(snapshot, "pre_num", num)
+      pre_num = Ops.get_integer(snapshot, "pre_num", num)
       type = Ops.get_symbol(snapshot, "type", :none)
 
-      pre_index = Ops.get(Snapper.id2index, previous_num, 0)
+      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
       pre_snapshot = Ops.get(Snapper.snapshots, pre_index, {})
 
       snapshot_term = lambda do |prefix, data|
@@ -145,24 +145,22 @@ module Yast
         )
       end
 
-      cont = VBox(
-        # popup label, %1 is number
-        Label(Builtins.sformat(_("Modify Snapshot %1"), num)),
-        snapshot_term.call("", snapshot)
-      )
-
-      if type == :POST
+      if type != :POST
         cont = VBox(
-          # popup label, %1, %2 are numbers (range)
-          Label(
-            Builtins.sformat(_("Modify Snapshots %1 - %2"), previous_num, num)
-          ),
+          # popup label, %{num} is number
+          Label(_("Modify Snapshot %{num}") % { :num => num }),
+          snapshot_term.call("", snapshot)
+        )
+      else
+        cont = VBox(
+          # popup label, %{pre} and %{post} are numbers
+          Label(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
           # label
-          Left(Label(Builtins.sformat(_("Pre (%1)"), previous_num))),
+          Left(Label(_("Pre (%{pre})") % { :pre => pre_num })),
           snapshot_term.call("pre_", pre_snapshot),
           VSpacing(),
           # label
-          Left(Label(Builtins.sformat(_("Post (%1)"), num))),
+          Left(Label(_("Post (%{post})") % { :post => num })),
           snapshot_term.call("", snapshot)
         )
       end
@@ -200,7 +198,7 @@ module Yast
         }
         if type == :POST
           pre_args = {
-            "num"         => previous_num,
+            "num"         => pre_num,
             "description" => UI.QueryWidget(Id("pre_description"), :Value),
             "cleanup"     => UI.QueryWidget(Id("pre_cleanup"), :Value),
             "userdata"    => get_userdata("pre_userdata")
@@ -340,15 +338,27 @@ module Yast
     # @return true if snapshot was deleted
     def DeleteSnapshotPopup(snapshot)
       snapshot = deep_copy(snapshot)
-      # yes/no popup question
-      if Popup.YesNo(
-          Builtins.sformat(
-            _("Really delete snapshot '%1'?"),
-            Ops.get_integer(snapshot, "num", 0)
-          )
-        )
-        return Snapper.DeleteSnapshot(snapshot)
+      num = Ops.get_integer(snapshot, "num", 0)
+      pre_num = Ops.get_integer(snapshot, "pre_num", num)
+      type = Ops.get_symbol(snapshot, "type", :none)
+
+      if type != :POST
+
+        # yes/no popup question
+        if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
+          return Snapper.DeleteSnapshot([ num ])
+        end
+
+      else
+
+        # yes/no popup question
+        if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
+                       { :pre => pre_num, :post => num })
+          return Snapper.DeleteSnapshot([ pre_num, num ])
+        end
+
       end
+
       false
     end
 
@@ -410,7 +420,7 @@ module Yast
               snapshot_items,
               Item(
                 Id(i),
-                Builtins.sformat("%1 - %2", pre, num),
+                "%{pre} & %{post}" % { :pre => pre, :post => num },
                 _("Pre & Post"),
                 pre_date,
                 date,
@@ -632,8 +642,8 @@ module Yast
       snapshot = deep_copy(Snapper.selected_snapshot)
       snapshot_num = Ops.get_integer(snapshot, "num", 0)
 
-      previous_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
-      pre_index = Ops.get(Snapper.id2index, previous_num, 0)
+      pre_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
+      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
       description = Ops.get_string(
         Snapper.snapshots,
         [pre_index, "description"],
@@ -929,7 +939,7 @@ module Yast
                 HSpacing(0.5)
               )
             )
-            show_file_modification.call(current_file, previous_num, snapshot_num)
+            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
         else
           UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
@@ -939,26 +949,26 @@ module Yast
         nil
       end
 
-      tree_label = Builtins.sformat("%1 - %2", previous_num, snapshot_num)
-
-      date_widget = VBox(
-        HBox(
-          # label, date string will follow at the end of line
-          Label(Id(:pre_date), _("Time of taking the first snapshot:")),
-          Right(Label(pre_date))
-        ),
-        HBox(
-          # label, date string will follow at the end of line
-          Label(Id(:post_date), _("Time of taking the second snapshot:")),
-          Right(Label(date))
-        )
-      )
       if type == :SINGLE
-        tree_label = Builtins.tostring(snapshot_num)
+        tree_label = "%{num}" % { :num => snapshot_num }
         date_widget = HBox(
           # label, date string will follow at the end of line
           Label(Id(:date), _("Time of taking the snapshot:")),
           Right(Label(date))
+        )
+      else
+        tree_label = "%{pre} && %{post}" % { :pre => pre_num, :post => snapshot_num }
+        date_widget = VBox(
+          HBox(
+            # label, date string will follow at the end of line
+            Label(Id(:pre_date), _("Time of taking the first snapshot:")),
+            Right(Label(pre_date))
+          ),
+          HBox(
+            # label, date string will follow at the end of line
+            Label(Id(:post_date), _("Time of taking the second snapshot:")),
+            Right(Label(date))
+          )
         )
       end
 
@@ -1081,7 +1091,7 @@ module Yast
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
             show_file_modification.call(current_file, snapshot_num, 0)
           else
-            show_file_modification.call(current_file, previous_num, snapshot_num)
+            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
 
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
@@ -1089,10 +1099,10 @@ module Yast
           selected_num = Convert.to_integer(
             UI.QueryWidget(Id(:selection_snapshots), :Value)
           )
-          show_file_modification.call(current_file, previous_num, selected_num)
+          show_file_modification.call(current_file, pre_num, selected_num)
 
         elsif ret == :diff_pre_current
-          show_file_modification.call(current_file, previous_num, 0)
+          show_file_modification.call(current_file, pre_num, 0)
 
         elsif ret == :diff_post_current
           show_file_modification.call(current_file, snapshot_num, 0)
@@ -1116,7 +1126,7 @@ module Yast
               )
             )
             Snapper.RestoreFiles(
-              ret == :restore_pre ? previous_num : snapshot_num,
+              ret == :restore_pre ? pre_num : snapshot_num,
               [current_filename]
             )
           end
@@ -1134,10 +1144,10 @@ module Yast
                     "from snapshot '%2' to current system?"
                 ),
                 Snapper.GetFileFullPath(current_filename),
-                previous_num
+                pre_num
               )
             )
-            Snapper.RestoreFiles(previous_num, [current_filename])
+            Snapper.RestoreFiles(pre_num, [current_filename])
           end
           next
 
@@ -1191,7 +1201,7 @@ module Yast
                     "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
                     "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
                 ),
-                previous_num,
+                pre_num,
                 to_restore.join("<br>")
               ),
               60,
@@ -1200,7 +1210,7 @@ module Yast
               Label.NoButton,
               :focus_no
             )
-            Snapper.RestoreFiles(previous_num, filenames)
+            Snapper.RestoreFiles(pre_num, filenames)
             break
           end
           next
