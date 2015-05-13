@@ -25,6 +25,7 @@
 #
 # Representation of the configuration of snapper.
 # Input and output routines.
+
 require "yast"
 
 module Yast
@@ -177,6 +178,17 @@ module Yast
       end
 
       return root
+
+    end
+
+
+    def get_config()
+
+      return SnapperDbus.get_config(@current_config)
+
+    rescue Exception => e
+      Report.Error(_("Failed to get config:" + "\n" + e.message))
+      return {}
 
     end
 

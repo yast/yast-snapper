@@ -71,7 +71,6 @@ module Yast
 
     # transform userdata from widget to map
     def get_userdata(id)
-      string = Convert.to_string(UI.QueryWidget(Id(id), :Value))
       return Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value))
     end
 
@@ -580,12 +579,8 @@ module Yast
 
     def generate_ui_file_tree(subtree)
       return subtree.children.map do |file|
-        if file.status != 0
-          Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
-               generate_ui_file_tree(file))
-        else
-          Item(Id(file.fullname), file.name, false, generate_ui_file_tree(file))
-        end
+        Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
+             generate_ui_file_tree(file))
       end
     end
 
@@ -625,13 +620,9 @@ module Yast
       current_filename = ""
       current_file = nil
 
-      # currently read subtree
-      subtree = []
-
       snapshot = deep_copy(Snapper.selected_snapshot)
       snapshot_num = Ops.get_integer(snapshot, "num", 0)
-      # map of whole tree (recursive)
-      tree_map = Ops.get_map(snapshot, "tree_map", {})
+
       previous_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
       pre_index = Ops.get(Snapper.id2index, previous_num, 0)
       description = Ops.get_string(
@@ -815,7 +806,7 @@ module Yast
 
       # create the term for selected file
       set_entry_term = lambda do
-        if current_file
+        if current_file && current_file.status != 0
           if type == :SINGLE
             UI.ReplaceWidget(
               Id(:diff_chooser),
@@ -940,13 +931,9 @@ module Yast
       end
 
       tree_label = Builtins.sformat("%1 - %2", previous_num, snapshot_num)
-      # find out the path to current subvolume
-      subtree_path = Snapper.GetSnapshotPath(snapshot_num)
-      subtree_path = Builtins.substring(
-        subtree_path,
-        0,
-        Builtins.find(subtree_path, ".snapshots/")
-      )
+
+      # find the path of current config
+      subtree_path = Snapper.get_config()[1]
 
       date_widget = VBox(
         HBox(
@@ -1176,10 +1163,9 @@ module Yast
             next
           end
 
-          to_restore = filenames.map {
-            # TODO prepend subvolume
-            |filename| String.EscapeTags(filename)
-          }
+          to_restore = filenames.map do |filename|
+            String.EscapeTags(subtree_path + filename)
+          end
 
           if Popup.AnyQuestionRichText(
                # popup headline

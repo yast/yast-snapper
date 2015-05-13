@@ -60,6 +60,22 @@ module Yast
     end
 
 
+    def get_config(config_name)
+
+      log.info("get_config config_name:#{config_name}")
+
+      result = @dbus_object.GetConfig(config_name).first()
+      log.info("get_config result:#{result}")
+
+      ret = result
+
+      log.info("get_config ret:#{ret}")
+
+      return ret
+
+    end
+
+
     def list_snapshots(config_name)
 
       log.info("list_snapshots config_name:#{config_name}")
