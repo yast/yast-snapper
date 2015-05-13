@@ -675,23 +675,6 @@ module Yast
       files_tree = Snapper.ReadModifiedFilesTree(from, to)
       Popup.ClearFeedback()
 
-      #if !Builtins.haskey(snapshot, "tree_map")
-      #  Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
-      #  tree_map = Ops.get_map(snapshot, "tree_map", {})
-      #end
-      # full paths of files marked as modified, mapping to changes string
-      files_index = {}
-      #if !Builtins.haskey(snapshot, "files_index")
-      #  Ops.set(
-      #    snapshot,
-      #    "files_index",
-      #    Snapper.ReadModifiedFilesIndex(from, to)
-      #  )
-      #  Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
-      #end
-
-      files_index = Ops.get_map(snapshot, "files_index", {})
-
       # update the global snapshots list
       Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
 
@@ -1178,32 +1161,28 @@ module Yast
             Snapper.RestoreFiles(snapshot_num, [current_filename])
           end
           next
-        elsif ret == :next
-          files2 = Convert.convert(
-            UI.QueryWidget(Id(:tree), :SelectedItems),
-            :from => "any",
-            :to   => "list <string>"
-          )
-          to_restore = []
-          files2 = Builtins.filter(files2) do |file|
-            if Builtins.haskey(files_index, file)
-              to_restore = Builtins.add(
-                to_restore,
-                String.EscapeTags(Snapper.GetFileFullPath(file))
-              )
-              next true
-            else
-              next false
-            end
-          end
 
-          if to_restore == []
+        elsif ret == :next
+
+          filenames = UI.QueryWidget(Id(:tree), :SelectedItems)
+
+          # remove filenames not changed between the snapshots, e.g. /foo if
+          # only /foo/bar changed
+          filenames.delete_if { |filename| files_tree.find(filename[1..-1]).status == 0 }
+
+          if filenames.empty?
             # popup message
-            Popup.Message(_("No file was selected for restoring"))
+            Popup.Message(_("No file was selected for restoring."))
             next
           end
-          # popup headline
+
+          to_restore = filenames.map {
+            # TODO prepend subvolume
+            |filename| String.EscapeTags(filename)
+          }
+
           if Popup.AnyQuestionRichText(
+               # popup headline
               _("Restoring files"),
               # popup message, %1 is snapshot number, %2 list of files
               Builtins.sformat(
@@ -1216,7 +1195,7 @@ module Yast
                     "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
                 ),
                 previous_num,
-                Builtins.mergestring(to_restore, "<br>")
+                to_restore.join("<br>")
               ),
               60,
               20,
@@ -1224,7 +1203,7 @@ module Yast
               Label.NoButton,
               :focus_no
             )
-            Snapper.RestoreFiles(previous_num, files2)
+            Snapper.RestoreFiles(previous_num, filenames)
             break
           end
           next
