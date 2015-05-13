@@ -625,12 +625,8 @@ module Yast
       current_filename = ""
       current_file = nil
 
-      # map of already read files
-      files = {}
       # currently read subtree
       subtree = []
-      tree_items = []
-      open_items = {}
 
       snapshot = deep_copy(Snapper.selected_snapshot)
       snapshot_num = Ops.get_integer(snapshot, "num", 0)
@@ -700,9 +696,6 @@ module Yast
       Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
 
       snapshot_name = Builtins.tostring(snapshot_num)
-
-      # map of all items in tree (just one level)
-      selected_items = {}
 
       # helper function: show the specific modification between snapshots
       show_file_modification = lambda do |file, from2, to2|
