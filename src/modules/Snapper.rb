@@ -133,6 +133,10 @@ module Yast
 
     include Yast::Logger
 
+    attr_reader :current_config
+    attr_reader :current_subvolume
+
+
     def main
       Yast.import "UI"
       textdomain "snapper"
@@ -159,6 +163,24 @@ module Yast
       @configs = []
 
       @current_config = ""
+      @current_subvolume = ""
+
+    end
+
+
+    def current_config=(current_config)
+
+      log.info("haha current_config setter #{current_config}")
+
+      @current_config = current_config
+
+      if !@current_config.empty?
+        @current_subvolume = get_config()[1]
+      else
+        @current_subvolume = ""
+      end
+
+      log.info("current_config:#{@current_config} current_subvolume:#{@current_subvolume}")
 
     end
 
@@ -193,6 +215,15 @@ module Yast
     end
 
 
+    def prepend_subvolume(filename)
+      if @current_subvolume == "/"
+        return filename
+      else
+        return @current_subvolume + filename
+      end
+    end
+
+
     # Return the path to given snapshot
     def GetSnapshotPath(snapshot_num)
 
@@ -215,6 +246,7 @@ module Yast
         file
       )
     end
+
 
     # Describe what was done with given file between given snapshots
     # - when new is 0, meaning is 'current system'
@@ -322,15 +354,14 @@ module Yast
       @configs = SnapperDbus.list_configs()
 
       if @configs.include?("root")
-        @current_config = "root"
+        self.current_config = "root"
       elsif !@configs.empty?
-        @current_config = @configs[0]
+        self.current_config = @configs[0]
       else
-        @current_config = ""
+        self.current_config = ""
       end
 
     end
-
 
 
     # Create new snapshot
@@ -606,7 +637,6 @@ tool can be used to create configurations."))
     publish :variable => :id2index, :type => "map <integer, integer>"
     publish :variable => :selected_snapshot_index, :type => "integer"
     publish :variable => :configs, :type => "list <string>"
-    publish :variable => :current_config, :type => "string"
     publish :function => :GetSnapshotPath, :type => "string (integer)"
     publish :function => :GetFileFullPath, :type => "string (string)"
     publish :function => :GetFileModification, :type => "map (string, integer, integer)"
@@ -617,6 +647,7 @@ tool can be used to create configurations."))
     publish :function => :CreateSnapshot, :type => "boolean (map)"
     publish :function => :Init, :type => "boolean ()"
     publish :function => :RestoreFiles, :type => "boolean (integer, list <string>)"
+
   end
 
   Snapper = SnapperClass.new

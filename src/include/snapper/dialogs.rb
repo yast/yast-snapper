@@ -529,6 +529,7 @@ module Yast
           else
             next
           end
+
         elsif ret == :show
           if Ops.get(snapshots, [selected, "type"]) == :PRE
             # popup message
@@ -543,6 +544,7 @@ module Yast
           Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
           Snapper.selected_snapshot_index = selected
           break
+
         elsif ret == :configs
           config = Convert.to_string(UI.QueryWidget(Id(ret), :Value))
           if config != Snapper.current_config
@@ -550,27 +552,33 @@ module Yast
             update_snapshots.call
             next
           end
+
         elsif ret == :create
           if CreateSnapshotPopup(pre_snapshots)
             update_snapshots.call
             next
           end
+
         elsif ret == :modify
           if ModifySnapshotPopup(Ops.get(snapshots, selected, {}))
             update_snapshots.call
             next
           end
+
         elsif ret == :delete
           if DeleteSnapshotPopup(Ops.get(snapshots, selected, {}))
             update_snapshots.call
             next
           end
+
         elsif ret == :next
           break
+
         else
           Builtins.y2error("unexpected retcode: %1", ret)
           next
         end
+
       end
 
       deep_copy(ret)
@@ -610,6 +618,7 @@ module Yast
 
     # @return dialog result
     def ShowDialog
+
       # dialog caption
       caption = _("Selected Snapshot Overview")
 
@@ -932,9 +941,6 @@ module Yast
 
       tree_label = Builtins.sformat("%1 - %2", previous_num, snapshot_num)
 
-      # find the path of current config
-      subtree_path = Snapper.get_config()[1]
-
       date_widget = VBox(
         HBox(
           # label, date string will follow at the end of line
@@ -964,7 +970,7 @@ module Yast
               HSpacing(),
               ReplacePoint(
                 Id(:reptree),
-                VBox(Left(Label(subtree_path)), Tree(Id(:tree), tree_label, []))
+                VBox(Left(Label(Snapper.current_subvolume)), Tree(Id(:tree), tree_label, []))
               ),
               HSpacing()
             ),
@@ -1028,7 +1034,7 @@ module Yast
         UI.ReplaceWidget(
           Id(:reptree),
           VBox(
-            Left(Label(subtree_path)),
+            Left(Label(Snapper.current_subvolume)),
             Tree(
               Id(:tree),
               Opt(:notify, :immediate, :multiSelection, :recursiveSelection),
@@ -1055,14 +1061,11 @@ module Yast
         previous_filename = current_filename
         current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
         current_filename = "" if current_filename == nil
-        log.info("haha current_filename:#{current_filename}")
 
         if current_filename.empty?
           current_file = nil
         else
           current_file = files_tree.find(current_filename[1..-1])
-          log.info("haha current_file.fullname:#{current_file.fullname} "\
-                   "current_file.status:#{current_file.status}")
         end
 
         # other tree events
@@ -1072,6 +1075,7 @@ module Yast
             set_entry_term.call
             UI.SetFocus(Id(:tree)) if textmode
           end
+
         elsif ret == :diff_snapshot
           if type == :SINGLE
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
@@ -1079,18 +1083,23 @@ module Yast
           else
             show_file_modification.call(current_file, previous_num, snapshot_num)
           end
+
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
           UI.ChangeWidget(Id(:selection_snapshots), :Enabled, true)
           selected_num = Convert.to_integer(
             UI.QueryWidget(Id(:selection_snapshots), :Value)
           )
           show_file_modification.call(current_file, previous_num, selected_num)
+
         elsif ret == :diff_pre_current
           show_file_modification.call(current_file, previous_num, 0)
+
         elsif ret == :diff_post_current
           show_file_modification.call(current_file, snapshot_num, 0)
+
         elsif ret == :abort || ret == :cancel || ret == :back
           break
+
         elsif (ret == :restore_pre || ret == :restore && type == :SINGLE) &&
             current_file.created?
           # yes/no question, %1 is file name, %2 is number
@@ -1112,6 +1121,7 @@ module Yast
             )
           end
           next
+
         elsif ret == :restore_pre
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
@@ -1130,6 +1140,7 @@ module Yast
             Snapper.RestoreFiles(previous_num, [current_filename])
           end
           next
+
         elsif ret == :restore
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
@@ -1164,7 +1175,7 @@ module Yast
           end
 
           to_restore = filenames.map do |filename|
-            String.EscapeTags(subtree_path + filename)
+            String.EscapeTags(Snapper.prepend_subvolume(filename))
           end
 
           if Popup.AnyQuestionRichText(
@@ -1193,10 +1204,12 @@ module Yast
             break
           end
           next
+
         else
           Builtins.y2error("unexpected retcode: %1", ret)
           next
         end
+
       end
 
       deep_copy(ret)
