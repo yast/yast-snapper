@@ -32,9 +32,6 @@ module Yast
 
 
   class Tree
-
-    # TODO inconsistent whether leading / in part of filename (e.g. in add and find)
-
     attr_accessor :name, :status
     attr_reader :children
 
@@ -85,6 +82,7 @@ module Yast
     def add(fullname, status)
 
       a, b = fullname.split("/", 2)
+      return add(b, status) if fullname.start_with? "/" #leading /
 
       i = @children.index{ |x| x.name == a }
 
@@ -110,6 +108,7 @@ module Yast
     def find(fullname)
 
       a, b = fullname.split("/", 2)
+      return find(b) if fullname.start_with? "/" #leading /
 
       i = @children.index{ |x| x.name == a }
 
@@ -196,7 +195,7 @@ module Yast
       root = Tree.new("", nil)
 
       files.each do |file|
-        root.add(file["filename"][1..-1], file["status"])
+        root.add(file["filename"], file["status"])
       end
 
       return root

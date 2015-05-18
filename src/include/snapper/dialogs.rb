@@ -1075,7 +1075,7 @@ module Yast
         if current_filename.empty?
           current_file = nil
         else
-          current_file = files_tree.find(current_filename[1..-1])
+          current_file = files_tree.find(current_filename)
         end
 
         # other tree events
