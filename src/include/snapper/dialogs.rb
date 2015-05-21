@@ -552,7 +552,6 @@ module Yast
           end
           # `POST snapshot is selected from the couple
           Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
-          Snapper.selected_snapshot_index = selected
           break
 
         elsif ret == :configs
@@ -684,9 +683,6 @@ module Yast
       Popup.ShowFeedback("", _("Calculating changed files..."))
       files_tree = Snapper.ReadModifiedFilesTree(from, to)
       Popup.ClearFeedback()
-
-      # update the global snapshots list
-      Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
 
       snapshot_name = Builtins.tostring(snapshot_num)
 

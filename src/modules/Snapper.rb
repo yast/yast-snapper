@@ -156,9 +156,6 @@ module Yast
       # mapping of snapshot number to index in snapshots list
       @id2index = {}
 
-      # index to snapshots list
-      @selected_snapshot_index = 0
-
       # list of configurations
       @configs = []
 
@@ -631,7 +628,6 @@ tool can be used to create configurations."))
     publish :variable => :snapshots, :type => "list <map>"
     publish :variable => :selected_snapshot, :type => "map"
     publish :variable => :id2index, :type => "map <integer, integer>"
-    publish :variable => :selected_snapshot_index, :type => "integer"
     publish :variable => :configs, :type => "list <string>"
     publish :function => :GetSnapshotPath, :type => "string (integer)"
     publish :function => :GetFileFullPath, :type => "string (string)"
