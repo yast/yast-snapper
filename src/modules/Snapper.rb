@@ -240,11 +240,7 @@ module Yast
     # @param [String] file path, relatively to current config
     # GetFileFullPath ("/testfile.txt") -> /abc/testfile.txt for /abc subvolume
     def GetFileFullPath(file)
-      Ops.get_string(
-        @snapshots,
-        [@selected_snapshot_index, "files_index", file, "full_path"],
-        file
-      )
+      return prepend_subvolume(file)
     end
 
 
@@ -492,7 +488,7 @@ tool can be used to create configurations."))
 
     # Copy given files from selected snapshot to current filesystem
     # @param [Fixnum] snapshot_num snapshot identifier
-    # @param [Array<String>] files list of full paths to files
+    # @param [Array<String>] files list of full paths to files (but excluding subvolume)
     # @return success
     def RestoreFiles(snapshot_num, files)
       files = deep_copy(files)
