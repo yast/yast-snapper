@@ -39,6 +39,21 @@ module Yast
 
     end
 
+
+    def unescape(str)
+      ret = str.dup
+      ret.force_encoding(Encoding::ASCII_8BIT)
+      ret.gsub!(/\\(\\|x\h\h)/) do |tmp|
+        if tmp == "\\\\"
+          "\\"
+        else
+          tmp[2,2].hex.chr
+        end
+      end
+      return ret
+    end
+
+
     def list_configs
       result = @dbus_object.ListConfigs().first
       log.info("list_configs result:#{result}")
@@ -59,6 +74,7 @@ module Yast
       1 => :PRE,
       2 => :POST
     }
+
     def list_snapshots(config_name)
       result = @dbus_object.ListSnapshots(config_name).first
       log.info("list_snapshots for name #{config_name} result:#{result}")
@@ -70,9 +86,9 @@ module Yast
           "pre_num" => snapshot[2],
           "date" => Time.at(snapshot[3]),
           "uid" => snapshot[4],
-          "description" => snapshot[5],
-          "cleanup" => snapshot[6],
-          "userdata" => snapshot[7]
+          "description" => unescape(snapshot[5]),
+          "cleanup" => unescape(snapshot[6]),
+          "userdata" => snapshot[7].map { |k, v| [ unescape(k), unescape(v) ] }.to_h
         }
       end
 
@@ -123,8 +139,8 @@ module Yast
     def set_snapshot(config_name, num, description, cleanup, userdata)
       result = @dbus_object.SetSnapshot(config_name, num, description, cleanup, userdata).first
       log.info("set_snapshot config_name:#{config_name} num:#{num} "\
-               "description:#{description} cleanup:#{cleanup} userdata:#{userdata}"\
-               " result #{result}")
+               "description:#{description} cleanup:#{cleanup} userdata:#{userdata} "\
+               "result #{result}")
 
       result
     end
@@ -140,7 +156,8 @@ module Yast
 
     def create_comparison(config_name, num1, num2)
       result = @dbus_object.CreateComparison(config_name, num1, num2).first
-      log.info("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} result: #{result}")
+      log.info("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
+               "result: #{result}")
 
       result
     end
@@ -148,7 +165,8 @@ module Yast
 
     def delete_comparison(config_name, num1, num2)
       result = @dbus_object.DeleteComparison(config_name, num1, num2).first
-      log.info("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} result:#{result}")
+      log.info("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
+               "result:#{result}")
 
       result
     end
@@ -159,7 +177,7 @@ module Yast
       log.info("get_files config_name:#{config_name} num1:#{num1} num2:#{num2} result:#{result}")
 
       result.map do |file|
-        { "filename" => file[0], "status" => file[1] }
+        { "filename" => unescape(file[0]), "status" => file[1] }
       end
     end
 

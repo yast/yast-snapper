@@ -1066,6 +1066,8 @@ module Yast
 
         previous_filename = current_filename
         current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
+        current_filename.force_encoding(Encoding::ASCII_8BIT)
+
         current_filename = "" if current_filename == nil
 
         if current_filename.empty?
@@ -1169,6 +1171,7 @@ module Yast
         elsif ret == :next
 
           filenames = UI.QueryWidget(Id(:tree), :SelectedItems)
+          filenames.map!{ |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
 
           # remove filenames not changed between the snapshots, e.g. /foo if
           # only /foo/bar changed
