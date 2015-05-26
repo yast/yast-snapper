@@ -40,14 +40,20 @@ module Yast
     end
 
 
+    # Escape a String or Hash for snapperd. See snapper dbus documentation for details.
     def escape(str)
 
       ret = str.dup
 
       if ret.is_a?(::String)
 
-        ret.gsub!(/\\/) do |tmp|  # TODO chr >= 128
-          "\\\\"
+        ret.force_encoding(Encoding::ASCII_8BIT)
+        ret.gsub!(/(\\|[\x80-\xff])/n) do |tmp|
+          if tmp == "\\"
+            "\\\\"
+          else
+            "\\x" + tmp[0].ord.to_s(16)
+          end
         end
 
       elsif ret.is_a?(Hash)
@@ -61,6 +67,7 @@ module Yast
     end
 
 
+    # Unescape a String or Hash from snapperd. See snapper dbus documentation for details.
     def unescape(str)
 
       ret = str.dup

@@ -18,6 +18,13 @@ describe "SnapperDbus#escape" do
   end
 
 
+  it "call with UTF-8" do
+
+    expect(Yast::SnapperDbus.escape("schön")).to eq("sch\\xc3\\xb6n".force_encoding(Encoding::ASCII_8BIT))
+
+  end
+
+
   it "call with slash" do
 
     expect(Yast::SnapperDbus.escape("\\")).to eq("\\\\")
@@ -27,7 +34,7 @@ describe "SnapperDbus#escape" do
 
   it "call with a hash" do
 
-    expect(Yast::SnapperDbus.escape({ "\\" => "guitar" })).to eq({ "\\\\" => "guitar" })
+    expect(Yast::SnapperDbus.escape({ "schön" => "hier" })).to eq({ "sch\\xc3\\xb6n".force_encoding(Encoding::ASCII_8BIT) => "hier" })
 
   end
 
