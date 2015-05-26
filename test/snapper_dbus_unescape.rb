@@ -33,4 +33,11 @@ describe "SnapperDbus#unescape" do
   end
 
 
+  it "call with a hash" do
+
+    expect(Yast::SnapperDbus.unescape({ "sch\\xc3\\xb6n" => "hier" })).to eq({ "schön".force_encoding(Encoding::ASCII_8BIT) => "hier" })
+
+  end
+
+
 end

@@ -40,17 +40,50 @@ module Yast
     end
 
 
-    def unescape(str)
+    def escape(str)
+
       ret = str.dup
-      ret.force_encoding(Encoding::ASCII_8BIT)
-      ret.gsub!(/\\(\\|x\h\h)/) do |tmp|
-        if tmp == "\\\\"
-          "\\"
-        else
-          tmp[2,2].hex.chr
+
+      if ret.is_a?(::String)
+
+        ret.gsub!(/\\/) do |tmp|  # TODO chr >= 128
+          "\\\\"
         end
+
+      elsif ret.is_a?(Hash)
+
+        ret = ret.map { |k, v| [ escape(k), escape(v) ] }.to_h
+
       end
+
       return ret
+
+    end
+
+
+    def unescape(str)
+
+      ret = str.dup
+
+      if ret.is_a?(::String)
+
+        ret.force_encoding(Encoding::ASCII_8BIT)
+        ret.gsub!(/\\(\\|x\h\h)/) do |tmp|
+          if tmp == "\\\\"
+            "\\"
+          else
+            tmp[2,2].hex.chr
+          end
+        end
+
+      elsif ret.is_a?(Hash)
+
+        ret = ret.map { |k, v| [ unescape(k), unescape(v) ] }.to_h
+
+      end
+
+      return ret
+
     end
 
 
@@ -88,7 +121,7 @@ module Yast
           "uid" => snapshot[4],
           "description" => unescape(snapshot[5]),
           "cleanup" => unescape(snapshot[6]),
-          "userdata" => snapshot[7].map { |k, v| [ unescape(k), unescape(v) ] }.to_h
+          "userdata" => unescape(snapshot[7])
         }
       end
 
@@ -100,7 +133,8 @@ module Yast
 
 
     def create_single_snapshot(config_name, description, cleanup, userdata)
-      result = @dbus_object.CreateSingleSnapshot(config_name, description, cleanup, userdata).first
+      result = @dbus_object.CreateSingleSnapshot(config_name, escape(description), escape(cleanup),
+                                                 escape(userdata)).first
       log.info("create_single_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result:#{result}")
 
@@ -109,7 +143,8 @@ module Yast
 
 
     def create_pre_snapshot(config_name, description, cleanup, userdata)
-      result = @dbus_object.CreatePreSnapshot(config_name, description, cleanup, userdata).first
+      result = @dbus_object.CreatePreSnapshot(config_name, escape(description), escape(cleanup),
+                                              escape(userdata)).first
       log.info("create_pre_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result: #{result}")
 
@@ -118,8 +153,8 @@ module Yast
 
 
     def create_post_snapshot(config_name, prenum, description, cleanup, userdata)
-      result = @dbus_object.CreatePostSnapshot(config_name, prenum, description, cleanup,
-        userdata).first
+      result = @dbus_object.CreatePostSnapshot(config_name, prenum, escape(description),
+                                               escape(cleanup), escape(userdata)).first
       log.info("create_post_snapshot config_name:#{config_name} prenum:#{prenum} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata}"\
                "result #{result}")
@@ -137,7 +172,8 @@ module Yast
 
 
     def set_snapshot(config_name, num, description, cleanup, userdata)
-      result = @dbus_object.SetSnapshot(config_name, num, description, cleanup, userdata).first
+      result = @dbus_object.SetSnapshot(config_name, num, escape(description), escape(cleanup),
+                                        escape(userdata)).first
       log.info("set_snapshot config_name:#{config_name} num:#{num} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata} "\
                "result #{result}")
