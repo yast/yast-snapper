@@ -1066,9 +1066,12 @@ module Yast
 
         previous_filename = current_filename
         current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
-        current_filename.force_encoding(Encoding::ASCII_8BIT)
 
-        current_filename = "" if current_filename == nil
+        if current_filename == nil
+          current_filename = ""
+        else
+          current_filename.force_encoding(Encoding::ASCII_8BIT)
+        end
 
         if current_filename.empty?
           current_file = nil
