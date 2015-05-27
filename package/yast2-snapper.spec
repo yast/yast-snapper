@@ -29,12 +29,8 @@ Source0:        %{name}-%{version}.tar.bz2
 License:        GPL-2.0
 
 BuildRequires:	doxygen
-BuildRequires:	gcc-c++
-BuildRequires:	libsnapper-devel >= 0.2.6
-BuildRequires:	libtool
 BuildRequires:	update-desktop-files
 BuildRequires:	yast2
-BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	yast2-devtools >= 3.1.10
 BuildRequires:  rubygem(rspec)
 BuildRequires:	rubygem(ruby-dbus)
