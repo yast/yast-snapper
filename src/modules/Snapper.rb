@@ -607,20 +607,13 @@ tool can be used to create configurations."))
     # convert string with userdata to a map
     # "a=1, b=2" -> { "a" => "1", "b" => "2" }
     def string_to_userdata(string)
-
-      tmp1 = string.split(",")
-
-      tmp2 = tmp1.map do |s|
-        s.split("=", 2).map { |t| t.strip }
-      end
-
-      # TODO, check for = sign
-
-      log.info("haha 1 '#{tmp1}' '#{tmp2}'")
-      log.info("haha 2 '#{tmp2.to_h}'")
-
-      return tmp2.to_h
-
+      string.split(",").map do |s|
+        if s.include?("=")
+          s.split("=", 2).map { |t| t.strip }
+        else
+          [ s.strip, "" ]
+        end
+      end.to_h
     end
 
 
