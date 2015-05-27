@@ -552,7 +552,7 @@ module Yast
             )
             next
           end
-          # `POST snapshot is selected from the couple
+          # `POST snapshot is selected from the pair
           Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
           break
 
@@ -1030,7 +1030,7 @@ module Yast
         contents,
         type == :SINGLE ?
           Ops.get_string(@HELPS, "show_single", "") :
-          Ops.get_string(@HELPS, "show_couple", ""),
+          Ops.get_string(@HELPS, "show_pair", ""),
         # button label
         Label.CancelButton,
         _("Restore Selected")
