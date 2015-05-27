@@ -104,7 +104,7 @@ module Yast
 
     def list_configs
       result = @dbus_object.ListConfigs().first
-      log.info("list_configs result:#{result}")
+      log.debug("list_configs result:#{result}")
 
       result.map(&:first)
     end
@@ -112,7 +112,7 @@ module Yast
 
     def get_config(config_name)
       result = @dbus_object.GetConfig(config_name).first
-      log.info("get_config for name '#{config_name}' result:#{result}")
+      log.debug("get_config for name '#{config_name}' result:#{result}")
 
       result
     end
@@ -126,7 +126,7 @@ module Yast
 
     def list_snapshots(config_name)
       result = @dbus_object.ListSnapshots(config_name).first
-      log.info("list_snapshots for name #{config_name} result:#{result}")
+      log.debug("list_snapshots for name #{config_name} result:#{result}")
 
       ret = result.map do |snapshot|
         {
@@ -141,7 +141,7 @@ module Yast
         }
       end
 
-      log.info("list_snapshots ret:#{ret}")
+      log.debug("list_snapshots ret:#{ret}")
 
       return ret
 
@@ -151,7 +151,7 @@ module Yast
     def create_single_snapshot(config_name, description, cleanup, userdata)
       result = @dbus_object.CreateSingleSnapshot(config_name, escape(description), escape(cleanup),
                                                  escape(userdata)).first
-      log.info("create_single_snapshot config_name:#{config_name} description:#{description} "\
+      log.debug("create_single_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result:#{result}")
 
       result
@@ -161,7 +161,7 @@ module Yast
     def create_pre_snapshot(config_name, description, cleanup, userdata)
       result = @dbus_object.CreatePreSnapshot(config_name, escape(description), escape(cleanup),
                                               escape(userdata)).first
-      log.info("create_pre_snapshot config_name:#{config_name} description:#{description} "\
+      log.debug("create_pre_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result: #{result}")
 
       result
@@ -171,7 +171,7 @@ module Yast
     def create_post_snapshot(config_name, prenum, description, cleanup, userdata)
       result = @dbus_object.CreatePostSnapshot(config_name, prenum, escape(description),
                                                escape(cleanup), escape(userdata)).first
-      log.info("create_post_snapshot config_name:#{config_name} prenum:#{prenum} "\
+      log.debug("create_post_snapshot config_name:#{config_name} prenum:#{prenum} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata}"\
                "result #{result}")
 
@@ -181,7 +181,7 @@ module Yast
 
     def delete_snapshots(config_name, nums)
       result = @dbus_object.DeleteSnapshots(config_name, nums).first
-      log.info("delete_snapshots config_name:#{config_name} nums:#{nums} result:#{result}")
+      log.debug("delete_snapshots config_name:#{config_name} nums:#{nums} result:#{result}")
 
       result
     end
@@ -190,7 +190,7 @@ module Yast
     def set_snapshot(config_name, num, description, cleanup, userdata)
       result = @dbus_object.SetSnapshot(config_name, num, escape(description), escape(cleanup),
                                         escape(userdata)).first
-      log.info("set_snapshot config_name:#{config_name} num:#{num} "\
+      log.debug("set_snapshot config_name:#{config_name} num:#{num} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata} "\
                "result #{result}")
 
@@ -200,7 +200,7 @@ module Yast
 
     def get_mount_point(config_name, num)
       result = @dbus_object.GetMountPoint(config_name, num).first
-      log.info("get_mount_point config_name:#{config_name} num:#{num} result#{result}")
+      log.debug("get_mount_point config_name:#{config_name} num:#{num} result#{result}")
 
       result
     end
@@ -208,7 +208,7 @@ module Yast
 
     def create_comparison(config_name, num1, num2)
       result = @dbus_object.CreateComparison(config_name, num1, num2).first
-      log.info("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
+      log.debug("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
                "result: #{result}")
 
       result
@@ -217,7 +217,7 @@ module Yast
 
     def delete_comparison(config_name, num1, num2)
       result = @dbus_object.DeleteComparison(config_name, num1, num2).first
-      log.info("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
+      log.debug("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
                "result:#{result}")
 
       result
@@ -226,7 +226,7 @@ module Yast
 
     def get_files(config_name, num1, num2)
       result = @dbus_object.GetFiles(config_name, num1, num2).first
-      log.info("get_files config_name:#{config_name} num1:#{num1} num2:#{num2} result:#{result}")
+      log.debug("get_files config_name:#{config_name} num1:#{num1} num2:#{num2} result:#{result}")
 
       result.map do |file|
         { "filename" => unescape(file[0]), "status" => file[1] }
