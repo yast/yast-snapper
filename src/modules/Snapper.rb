@@ -166,8 +166,6 @@ module Yast
 
     def current_config=(current_config)
 
-      log.info("haha current_config setter #{current_config}")
-
       @current_config = current_config
 
       if !@current_config.empty?
