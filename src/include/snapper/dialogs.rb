@@ -117,14 +117,16 @@ module Yast
               HSpacing(0.4),
               VBox(
                 # text entry label
-                TextEntry(
+                InputField(
                   Id(Ops.add(prefix, "description")),
+                  Opt(:hstretch),
                   _("Description"),
                   Ops.get_string(data, "description", "")
                 ),
                 # text entry label
-                TextEntry(
+                InputField(
                   Id(Ops.add(prefix, "userdata")),
+                  Opt(:hstretch),
                   _("User data"),
                   Snapper.userdata_to_string(data["userdata"])
                 ),
@@ -239,7 +241,7 @@ module Yast
             # popup label
             Label(_("Create New Snapshot")),
             # text entry label
-            TextEntry(Id("description"), _("Description"), ""),
+            InputField(Id("description"), Opt(:hstretch), _("Description"), ""),
             RadioButtonGroup(
               Id(:rb_type),
               Left(
@@ -285,7 +287,7 @@ module Yast
               )
             ),
             # text entry label
-            TextEntry(Id("userdata"), _("User data"), ""),
+            InputField(Id("userdata"), Opt(:hstretch), _("User data"), ""),
             # text entry label
             ComboBox(
               Id("cleanup"),
