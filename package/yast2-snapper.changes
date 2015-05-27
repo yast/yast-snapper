@@ -2,6 +2,7 @@
 Tue May 12 12:44:42 CEST 2015 - aschnell@suse.de
 
 - use DBus interface instead of libsnapper (fate#316647)
+- tagged RPM as noarch
 - use status icons from yast2-branding
 - delete pre and post snapshot when selecting delete for a pre post
   pair
