@@ -24,49 +24,44 @@
 # Summary:	Main file
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
 #
-# $Id$
-#
 # Main file for snapper configuration. Uses all other files.
-module Yast
-  class SnapperClient < Client
-    def main
-      Yast.import "UI"
 
-      #**
-      # <h3>Configuration of snapper</h3>
+module Yast
+
+  class SnapperClient < Client
+
+    include Yast::Logger
+
+    def main
+
+      Yast.import "UI"
 
       textdomain "snapper"
 
-      # The main ()
-      Builtins.y2milestone("----------------------------------------")
-      Builtins.y2milestone("Snapper module started")
-
-      Yast.import "Progress"
-      Yast.import "Report"
-      Yast.import "Summary"
+      log.info("----------------------------------------")
+      log.info("Snapper module started")
 
       Yast.import "CommandLine"
       Yast.include self, "snapper/wizards.rb"
 
-      @cmdline_description = {
+      cmdline_description = {
         "id"         => "snapper",
         "help"       => _("Configuration of system snapshots"),
         "guihandler" => fun_ref(method(:SnapperSequence), "any ()")
       }
 
-      # main ui function
-      @ret = CommandLine.Run(@cmdline_description)
-      Builtins.y2debug("ret=%1", @ret)
+      ret = CommandLine.Run(cmdline_description)
+      log.debug("ret=#{ret}")
 
-      # Finish
-      Builtins.y2milestone("Snapper module finished")
-      Builtins.y2milestone("----------------------------------------")
+      log.info("Snapper module finished")
+      log.info("----------------------------------------")
 
-      deep_copy(@ret) 
+      deep_copy(ret)
 
-      # EOF
     end
+
   end
+
 end
 
 Yast::SnapperClient.new.main

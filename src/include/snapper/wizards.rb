@@ -23,10 +23,11 @@
 # Package:	Configuration of snapper
 # Summary:	Wizards definitions
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
-#
-# $Id$
+
 module Yast
+
   module SnapperWizardsInclude
+
     def initialize_snapper_wizards(include_target)
       Yast.import "UI"
 
@@ -76,5 +77,7 @@ module Yast
       UI.CloseDialog
       deep_copy(ret)
     end
+
   end
+
 end
