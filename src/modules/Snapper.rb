@@ -314,13 +314,11 @@ module Yast
 
       snapshot_maps = SnapperDbus.list_snapshots(@current_config)
 
-      snapshot_maps = [] if snapshot_maps == nil
       @snapshots = []
       i = 0
       Builtins.foreach(snapshot_maps) do |snapshot|
         id = Ops.get_integer(snapshot, "num", 0)
         next if id == 0 # ignore the 'current system'
-        Ops.set(snapshot, "name", Builtins.tostring(id))
 
         if snapshot["type"] == :PRE
           snapshot_maps.each do |x|
