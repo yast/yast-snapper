@@ -597,14 +597,14 @@ tool can be used to create configurations."))
     end
 
 
-    # convert map with userdata to a string
+    # convert hash with userdata to a string
     # { "a" => "1", "b" => "2" } -> "a=1, b=2"
     def userdata_to_string(userdata)
       return userdata.map { |k, v| "#{k}=#{v}" }.join(", ")
     end
 
 
-    # convert string with userdata to a map
+    # convert string with userdata to a hash
     # "a=1, b=2" -> { "a" => "1", "b" => "2" }
     def string_to_userdata(string)
       string.split(",").map do |s|

@@ -60,6 +60,10 @@ module Yast
 
         ret = ret.map { |k, v| [ escape(k), escape(v) ] }.to_h
 
+      elsif
+
+        raise RuntimeError, "cannot escape object"
+
       end
 
       return ret
@@ -75,7 +79,7 @@ module Yast
       if ret.is_a?(::String)
 
         ret.force_encoding(Encoding::ASCII_8BIT)
-        ret.gsub!(/\\(\\|x\h\h)/) do |tmp|
+        ret.gsub!(/\\(\\|x\h\h)/n) do |tmp|
           if tmp == "\\\\"
             "\\"
           else
@@ -86,6 +90,10 @@ module Yast
       elsif ret.is_a?(Hash)
 
         ret = ret.map { |k, v| [ unescape(k), unescape(v) ] }.to_h
+
+      elsif
+
+        raise RuntimeError, "cannot unescape object"
 
       end
 
@@ -108,6 +116,7 @@ module Yast
 
       result
     end
+
 
     TYPE_INT_TO_SYMBOL = {
       0 => :SINGLE,
