@@ -330,7 +330,7 @@ module Yast
           end
         end
 
-        Builtins.y2debug("snapshot data: %1", snapshot)
+        log.debug("snapshot:#{snapshot}")
         @snapshots = Builtins.add(@snapshots, snapshot)
         Ops.set(@id2index, id, i)
         i = Ops.add(i, 1)
