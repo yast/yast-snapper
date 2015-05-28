@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2006-2012 Novell, Inc. All Rights Reserved.
+# Copyright (c) 2006-2015 Novell, Inc. All Rights Reserved.
 #
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -23,10 +23,14 @@
 # Package:	Configuration of snapper
 # Summary:	Dialogs definitions
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
-#
-# $Id$
+
 module Yast
+
   module SnapperDialogsInclude
+
+    include Yast::Logger
+
+
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
 
@@ -45,7 +49,7 @@ module Yast
 
 
     def timestring(t)
-      return Time.at(t).strftime("%F %T")
+      return t.strftime("%F %T")
     end
 
 
@@ -53,37 +57,23 @@ module Yast
       Popup.ReallyAbort(true)
     end
 
+
     # Read settings dialog
     # @return `abort if aborted and `next otherwise
     def ReadDialog
       return :abort if !Confirm.MustBeRoot
 
       Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
-      ret = Snapper.Read
+      ret = Snapper.Init()
       ret ? :next : :abort
     end
 
-    # convert map of userdata to string
-    # $[ "a" : "b", "1" : "2" ] -> "a=b,1=2"
-    def userdata2string(userdata)
-      userdata = deep_copy(userdata)
-      Builtins.mergestring(Builtins.maplist(userdata) do |key, val|
-        Builtins.sformat("%1=%2", key, val)
-      end, ",")
-    end
 
     # transform userdata from widget to map
     def get_userdata(id)
-      u = {}
-      user_s = Convert.to_string(UI.QueryWidget(Id(id), :Value))
-      Builtins.foreach(Builtins.splitstring(user_s, ",")) do |line|
-        split = Builtins.splitstring(line, "=")
-        if Ops.greater_than(Builtins.size(split), 1)
-          Ops.set(u, Ops.get(split, 0, ""), Ops.get(split, 1, ""))
-        end
-      end
-      deep_copy(u)
+      return Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value))
     end
+
 
     # generate list of items for Cleanup combo box
     def cleanup_items(current)
@@ -91,6 +81,7 @@ module Yast
         Item(Id(cleanup), cleanup, cleanup == current)
       end
     end
+
 
     # compare editable parts of snapshot maps
     def snapshot_modified(orig, new)
@@ -103,16 +94,17 @@ module Yast
       ret
     end
 
+
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
     def ModifySnapshotPopup(snapshot)
       snapshot = deep_copy(snapshot)
       modified = false
       num = Ops.get_integer(snapshot, "num", 0)
-      previous_num = Ops.get_integer(snapshot, "pre_num", num)
+      pre_num = Ops.get_integer(snapshot, "pre_num", num)
       type = Ops.get_symbol(snapshot, "type", :none)
 
-      pre_index = Ops.get(Snapper.id2index, previous_num, 0)
+      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
       pre_snapshot = Ops.get(Snapper.snapshots, pre_index, {})
 
       snapshot_term = lambda do |prefix, data|
@@ -125,16 +117,18 @@ module Yast
               HSpacing(0.4),
               VBox(
                 # text entry label
-                TextEntry(
+                InputField(
                   Id(Ops.add(prefix, "description")),
+                  Opt(:hstretch),
                   _("Description"),
                   Ops.get_string(data, "description", "")
                 ),
                 # text entry label
-                TextEntry(
+                InputField(
                   Id(Ops.add(prefix, "userdata")),
+                  Opt(:hstretch),
                   _("User data"),
-                  userdata2string(Ops.get_map(data, "userdata", {}))
+                  Snapper.userdata_to_string(data["userdata"])
                 ),
                 Left(
                   ComboBox(
@@ -153,24 +147,22 @@ module Yast
         )
       end
 
-      cont = VBox(
-        # popup label, %1 is number
-        Label(Builtins.sformat(_("Modify Snapshot %1"), num)),
-        snapshot_term.call("", snapshot)
-      )
-
-      if type == :POST
+      if type != :POST
         cont = VBox(
-          # popup label, %1, %2 are numbers (range)
-          Label(
-            Builtins.sformat(_("Modify Snapshots %1 - %2"), previous_num, num)
-          ),
+          # popup label, %{num} is number
+          Label(_("Modify Snapshot %{num}") % { :num => num }),
+          snapshot_term.call("", snapshot)
+        )
+      else
+        cont = VBox(
+          # popup label, %{pre} and %{post} are numbers
+          Label(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
           # label
-          Left(Label(Builtins.sformat(_("Pre (%1)"), previous_num))),
+          Left(Label(_("Pre (%{pre})") % { :pre => pre_num })),
           snapshot_term.call("pre_", pre_snapshot),
           VSpacing(),
           # label
-          Left(Label(Builtins.sformat(_("Post (%1)"), num))),
+          Left(Label(_("Post (%{post})") % { :post => num })),
           snapshot_term.call("", snapshot)
         )
       end
@@ -208,7 +200,7 @@ module Yast
         }
         if type == :POST
           pre_args = {
-            "num"         => previous_num,
+            "num"         => pre_num,
             "description" => UI.QueryWidget(Id("pre_description"), :Value),
             "cleanup"     => UI.QueryWidget(Id("pre_cleanup"), :Value),
             "userdata"    => get_userdata("pre_userdata")
@@ -229,6 +221,7 @@ module Yast
       modified
     end
 
+
     # Popup for creating new snapshot
     # @return true if new snapshot was created
     def CreateSnapshotPopup(pre_snapshots)
@@ -248,7 +241,7 @@ module Yast
             # popup label
             Label(_("Create New Snapshot")),
             # text entry label
-            TextEntry(Id("description"), _("Description"), ""),
+            InputField(Id("description"), Opt(:hstretch), _("Description"), ""),
             RadioButtonGroup(
               Id(:rb_type),
               Left(
@@ -294,7 +287,7 @@ module Yast
               )
             ),
             # text entry label
-            TextEntry(Id("userdata"), _("User data"), ""),
+            InputField(Id("userdata"), Opt(:hstretch), _("User data"), ""),
             # text entry label
             ComboBox(
               Id("cleanup"),
@@ -342,21 +335,35 @@ module Yast
       created
     end
 
+
     # Popup for deleting existing snapshot
     # @return true if snapshot was deleted
     def DeleteSnapshotPopup(snapshot)
       snapshot = deep_copy(snapshot)
-      # yes/no popup question
-      if Popup.YesNo(
-          Builtins.sformat(
-            _("Really delete snapshot '%1'?"),
-            Ops.get_integer(snapshot, "num", 0)
-          )
-        )
-        return Snapper.DeleteSnapshot(snapshot)
+      num = Ops.get_integer(snapshot, "num", 0)
+      pre_num = Ops.get_integer(snapshot, "pre_num", num)
+      type = Ops.get_symbol(snapshot, "type", :none)
+
+      if type != :POST
+
+        # yes/no popup question
+        if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
+          return Snapper.DeleteSnapshot([ num ])
+        end
+
+      else
+
+        # yes/no popup question
+        if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
+                       { :pre => pre_num, :post => num })
+          return Snapper.DeleteSnapshot([ pre_num, num ])
+        end
+
       end
+
       false
     end
+
 
     # Summary dialog
     # @return dialog result
@@ -382,9 +389,9 @@ module Yast
           num = Ops.get_integer(s, "num", 0)
           date = ""
           if num != 0
-            date = timestring(Ops.get_integer(s, ["date"], 0))
+            date = timestring(s["date"])
           end
-          userdata = userdata2string(Ops.get_map(s, "userdata", {}))
+          userdata = Snapper.userdata_to_string(s["userdata"])
           if Ops.get_symbol(s, "type", :none) == :SINGLE
             snapshot_items = Builtins.add(
               snapshot_items,
@@ -410,12 +417,12 @@ module Yast
               next
             end
             desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
-            pre_date = timestring(Ops.get_integer(Snapper.snapshots, [index, "date"], 0))
+            pre_date = timestring(Snapper.snapshots[index]["date"])
             snapshot_items = Builtins.add(
               snapshot_items,
               Item(
                 Id(i),
-                Builtins.sformat("%1 - %2", pre, num),
+                "%{pre} & %{post}" % { :pre => pre, :post => num },
                 _("Pre & Post"),
                 pre_date,
                 date,
@@ -453,8 +460,7 @@ module Yast
         # busy popup message
         Popup.ShowFeedback("", _("Reading list of snapshots..."))
 
-        Snapper.InitializeSnapper(Snapper.current_config)
-        Snapper.ReadSnapshots
+        Snapper.ReadSnapshots()
         snapshots = deep_copy(Snapper.snapshots)
         Popup.ClearFeedback
 
@@ -535,6 +541,7 @@ module Yast
           else
             next
           end
+
         elsif ret == :show
           if Ops.get(snapshots, [selected, "type"]) == :PRE
             # popup message
@@ -545,10 +552,10 @@ module Yast
             )
             next
           end
-          # `POST snapshot is selected from the couple
+          # `POST snapshot is selected from the pair
           Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
-          Snapper.selected_snapshot_index = selected
           break
+
         elsif ret == :configs
           config = Convert.to_string(UI.QueryWidget(Id(ret), :Value))
           if config != Snapper.current_config
@@ -556,62 +563,95 @@ module Yast
             update_snapshots.call
             next
           end
+
         elsif ret == :create
           if CreateSnapshotPopup(pre_snapshots)
             update_snapshots.call
             next
           end
+
         elsif ret == :modify
           if ModifySnapshotPopup(Ops.get(snapshots, selected, {}))
             update_snapshots.call
             next
           end
+
         elsif ret == :delete
           if DeleteSnapshotPopup(Ops.get(snapshots, selected, {}))
             update_snapshots.call
             next
           end
+
         elsif ret == :next
           break
+
         else
           Builtins.y2error("unexpected retcode: %1", ret)
           next
         end
+
       end
 
       deep_copy(ret)
     end
 
+
+    def generate_ui_file_tree(subtree)
+      return subtree.children.map do |file|
+        Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
+             generate_ui_file_tree(file))
+      end
+    end
+
+
+    def format_diff(diff, textmode)
+      lines = Builtins.splitstring(String.EscapeTags(diff), "\n")
+      if !textmode
+        # colorize diff output
+        lines.map! do |line|
+          case line[0]
+          when "+"
+            line = "<font color=blue>#{line}</font>"
+          when "-"
+            line = "<font color=red>#{line}</font>"
+          end
+          line
+        end
+      end
+      ret = lines.join("<br>")
+      if !textmode
+        # show fixed font in diff
+        ret = "<pre>" + ret + "</pre>"
+      end
+      return ret
+    end
+
+
     # @return dialog result
     def ShowDialog
+
       # dialog caption
       caption = _("Selected Snapshot Overview")
 
       display_info = UI.GetDisplayInfo
       textmode = Ops.get_boolean(display_info, "TextMode", false)
-      previous_file = ""
-      current_file = ""
 
-      # map of already read files
-      files = {}
-      # currently read subtree
-      subtree = []
-      tree_items = []
-      open_items = {}
+      previous_filename = ""
+      current_filename = ""
+      current_file = nil
 
       snapshot = deep_copy(Snapper.selected_snapshot)
       snapshot_num = Ops.get_integer(snapshot, "num", 0)
-      # map of whole tree (recursive)
-      tree_map = Ops.get_map(snapshot, "tree_map", {})
-      previous_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
-      pre_index = Ops.get(Snapper.id2index, previous_num, 0)
+
+      pre_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
+      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
       description = Ops.get_string(
         Snapper.snapshots,
         [pre_index, "description"],
         ""
       )
-      pre_date = timestring(Ops.get_integer(Snapper.snapshots, [pre_index, "date"], 0))
-      date = timestring(Ops.get_integer(snapshot, "date", 0))
+      pre_date = timestring(Snapper.snapshots[pre_index]["date"])
+      date = timestring(snapshot["date"])
       type = Ops.get_symbol(snapshot, "type", :NONE)
       combo_items = []
       Builtins.foreach(Snapper.snapshots) do |s|
@@ -643,104 +683,17 @@ module Yast
 
       # busy popup message
       Popup.ShowFeedback("", _("Calculating changed files..."))
-
-      if !Builtins.haskey(snapshot, "tree_map")
-        Ops.set(snapshot, "tree_map", Snapper.ReadModifiedFilesMap(from, to))
-        tree_map = Ops.get_map(snapshot, "tree_map", {})
-      end
-      # full paths of files marked as modified, mapping to changes string
-      files_index = {}
-      if !Builtins.haskey(snapshot, "files_index")
-        Ops.set(
-          snapshot,
-          "files_index",
-          Snapper.ReadModifiedFilesIndex(from, to)
-        )
-        Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
-      end
-      Popup.ClearFeedback
-      files_index = Ops.get_map(snapshot, "files_index", {})
-
-      # update the global snapshots list
-      Ops.set(Snapper.snapshots, Snapper.selected_snapshot_index, snapshot)
+      files_tree = Snapper.ReadModifiedFilesTree(from, to)
+      Popup.ClearFeedback()
 
       snapshot_name = Builtins.tostring(snapshot_num)
-
-      # map of all items in tree (just one level)
-      selected_items = {}
-
-      file_was_created = lambda do |file|
-        Builtins.substring(
-          Ops.get_string(files_index, [file, "status"], ""),
-          0,
-          1
-        ) == "+"
-      end
-      file_was_removed = lambda do |file|
-        Builtins.substring(
-          Ops.get_string(files_index, [file, "status"], ""),
-          0,
-          1
-        ) == "-"
-      end
-      # go through the map defining filesystem tree and create the widget items
-      generate_tree_items = lambda do |current_path, current_branch|
-        current_branch = deep_copy(current_branch)
-        ret2 = []
-        Builtins.foreach(current_branch) do |node, branch|
-          new_path = Ops.add(Ops.add(current_path, "/"), node)
-          if Builtins.haskey(files_index, new_path)
-            icon_f = "16x16/apps/gdu-smart-unknown.png"
-            if file_was_created.call(new_path)
-              icon_f = "16x16/apps/gdu-smart-healthy.png"
-            elsif file_was_removed.call(new_path)
-              icon_f = "16x16/apps/gdu-smart-failing.png"
-            end
-            ret2 = Builtins.add(
-              ret2,
-              Item(
-                Id(new_path),
-                term(:icon, icon_f),
-                node,
-                false,
-                generate_tree_items.call(
-                  new_path,
-                  Convert.convert(
-                    branch,
-                    :from => "map",
-                    :to   => "map <string, map>"
-                  )
-                )
-              )
-            )
-          else
-            ret2 = Builtins.add(
-              ret2,
-              Item(
-                Id(new_path),
-                node,
-                false,
-                generate_tree_items.call(
-                  new_path,
-                  Convert.convert(
-                    branch,
-                    :from => "map",
-                    :to   => "map <string, map>"
-                  )
-                )
-              )
-            )
-          end
-        end
-        deep_copy(ret2)
-      end
 
       # helper function: show the specific modification between snapshots
       show_file_modification = lambda do |file, from2, to2|
         content = VBox()
         # busy popup message
         Popup.ShowFeedback("", _("Calculating file modifications..."))
-        modification = Snapper.GetFileModification(file, from2, to2)
+        modification = Snapper.GetFileModification(file.fullname, from2, to2)
         Popup.ClearFeedback
         status = Ops.get_list(modification, "status", [])
         if Builtins.contains(status, "created")
@@ -819,26 +772,8 @@ module Yast
         end
 
         if Builtins.haskey(modification, "diff")
-          diff = String.EscapeTags(Ops.get_string(modification, "diff", ""))
-          l = Builtins.splitstring(diff, "\n")
-          if !textmode
-            # colorize diff output
-            l = Builtins.maplist(l) do |line|
-              first = Builtins.substring(line, 0, 1)
-              if first == "+"
-                line = Builtins.sformat("<font color=blue>%1</font>", line)
-              elsif first == "-"
-                line = Builtins.sformat("<font color=red>%1</font>", line)
-              end
-              line
-            end
-          end
-          diff = Builtins.mergestring(l, "<br>")
-          if !textmode
-            # show fixed font in diff
-            diff = Ops.add(Ops.add("<pre>", diff), "</pre>")
-          end
-          content = Builtins.add(content, RichText(Id(:diff), diff))
+          content = Builtins.add(content, RichText(Id(:diff),
+            format_diff(Ops.get_string(modification, "diff", ""), textmode)))
         else
           content = Builtins.add(content, VStretch())
         end
@@ -848,7 +783,7 @@ module Yast
         # button label
         restore_label_single = _("Restore")
 
-        if file_was_created.call(file)
+        if file.created?
           restore_label = Label.RemoveButton
           restore_label_single = Label.RemoveButton
         end
@@ -877,7 +812,7 @@ module Yast
             HSpacing(0.5)
           )
         )
-        if type != :SINGLE && file_was_removed.call(file)
+        if type != :SINGLE && file.deleted?
           # file removed in 2nd snapshot cannot be restored from that snapshot
           UI.ChangeWidget(Id(:restore), :Enabled, false)
         end
@@ -888,7 +823,7 @@ module Yast
 
       # create the term for selected file
       set_entry_term = lambda do
-        if current_file != "" && Builtins.haskey(files_index, current_file)
+        if current_file && current_file.status != 0
           if type == :SINGLE
             UI.ReplaceWidget(
               Id(:diff_chooser),
@@ -1002,11 +937,7 @@ module Yast
                 HSpacing(0.5)
               )
             )
-            show_file_modification.call(
-              current_file,
-              previous_num,
-              snapshot_num
-            )
+            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
         else
           UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
@@ -1016,33 +947,26 @@ module Yast
         nil
       end
 
-      tree_label = Builtins.sformat("%1 - %2", previous_num, snapshot_num)
-      # find out the path to current subvolume
-      subtree_path = Snapper.GetSnapshotPath(snapshot_num)
-      subtree_path = Builtins.substring(
-        subtree_path,
-        0,
-        Builtins.find(subtree_path, ".snapshots/")
-      )
-
-      date_widget = VBox(
-        HBox(
-          # label, date string will follow at the end of line
-          Label(Id(:pre_date), _("Time of taking the first snapshot:")),
-          Right(Label(pre_date))
-        ),
-        HBox(
-          # label, date string will follow at the end of line
-          Label(Id(:post_date), _("Time of taking the second snapshot:")),
-          Right(Label(date))
-        )
-      )
       if type == :SINGLE
-        tree_label = Builtins.tostring(snapshot_num)
+        tree_label = "%{num}" % { :num => snapshot_num }
         date_widget = HBox(
           # label, date string will follow at the end of line
           Label(Id(:date), _("Time of taking the snapshot:")),
           Right(Label(date))
+        )
+      else
+        tree_label = "%{pre} && %{post}" % { :pre => pre_num, :post => snapshot_num }
+        date_widget = VBox(
+          HBox(
+            # label, date string will follow at the end of line
+            Label(Id(:pre_date), _("Time of taking the first snapshot:")),
+            Right(Label(pre_date))
+          ),
+          HBox(
+            # label, date string will follow at the end of line
+            Label(Id(:post_date), _("Time of taking the second snapshot:")),
+            Right(Label(date))
+          )
         )
       end
 
@@ -1054,7 +978,7 @@ module Yast
               HSpacing(),
               ReplacePoint(
                 Id(:reptree),
-                VBox(Left(Label(subtree_path)), Tree(Id(:tree), tree_label, []))
+                VBox(Left(Label(Snapper.current_subvolume)), Tree(Id(:tree), tree_label, []))
               ),
               HSpacing()
             ),
@@ -1106,19 +1030,19 @@ module Yast
         contents,
         type == :SINGLE ?
           Ops.get_string(@HELPS, "show_single", "") :
-          Ops.get_string(@HELPS, "show_couple", ""),
+          Ops.get_string(@HELPS, "show_pair", ""),
         # button label
         Label.CancelButton,
         _("Restore Selected")
       )
 
-      tree_items = generate_tree_items.call("", tree_map)
+      tree_items = generate_ui_file_tree(files_tree)
 
-      if Ops.greater_than(Builtins.size(tree_items), 0)
+      if !tree_items.empty?
         UI.ReplaceWidget(
           Id(:reptree),
           VBox(
-            Left(Label(subtree_path)),
+            Left(Label(Snapper.current_subvolume)),
             Tree(
               Id(:tree),
               Opt(:notify, :immediate, :multiSelection, :recursiveSelection),
@@ -1131,7 +1055,7 @@ module Yast
         UI.ChangeWidget(:tree, :CurrentItem, nil)
       end
 
-      current_file = ""
+      current_filename = ""
 
       set_entry_term.call
 
@@ -1142,44 +1066,55 @@ module Yast
         event = UI.WaitForEvent
         ret = Ops.get_symbol(event, "ID")
 
-        previous_file = current_file
-        current_file = Convert.to_string(
-          UI.QueryWidget(Id(:tree), :CurrentItem)
-        )
-        current_file = "" if current_file == nil
+        previous_filename = current_filename
+        current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
+
+        if current_filename == nil
+          current_filename = ""
+        else
+          current_filename.force_encoding(Encoding::ASCII_8BIT)
+        end
+
+        if current_filename.empty?
+          current_file = nil
+        else
+          current_file = files_tree.find(current_filename)
+        end
 
         # other tree events
         if ret == :tree
           # seems like tree widget emits 2 SelectionChanged events
-          if current_file != previous_file
+          if current_filename != previous_filename
             set_entry_term.call
             UI.SetFocus(Id(:tree)) if textmode
           end
+
         elsif ret == :diff_snapshot
           if type == :SINGLE
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
             show_file_modification.call(current_file, snapshot_num, 0)
           else
-            show_file_modification.call(
-              current_file,
-              previous_num,
-              snapshot_num
-            )
+            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
+
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
           UI.ChangeWidget(Id(:selection_snapshots), :Enabled, true)
           selected_num = Convert.to_integer(
             UI.QueryWidget(Id(:selection_snapshots), :Value)
           )
-          show_file_modification.call(current_file, previous_num, selected_num)
+          show_file_modification.call(current_file, pre_num, selected_num)
+
         elsif ret == :diff_pre_current
-          show_file_modification.call(current_file, previous_num, 0)
+          show_file_modification.call(current_file, pre_num, 0)
+
         elsif ret == :diff_post_current
           show_file_modification.call(current_file, snapshot_num, 0)
+
         elsif ret == :abort || ret == :cancel || ret == :back
           break
+
         elsif (ret == :restore_pre || ret == :restore && type == :SINGLE) &&
-            file_was_created.call(current_file)
+            current_file.created?
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
               Builtins.sformat(
@@ -1190,15 +1125,16 @@ module Yast
                     "\n" +
                     "from current system?"
                 ),
-                Snapper.GetFileFullPath(current_file)
+                Snapper.GetFileFullPath(current_filename)
               )
             )
             Snapper.RestoreFiles(
-              ret == :restore_pre ? previous_num : snapshot_num,
-              [current_file]
+              ret == :restore_pre ? pre_num : snapshot_num,
+              [current_filename]
             )
           end
           next
+
         elsif ret == :restore_pre
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
@@ -1210,13 +1146,14 @@ module Yast
                     "\n" +
                     "from snapshot '%2' to current system?"
                 ),
-                Snapper.GetFileFullPath(current_file),
-                previous_num
+                Snapper.GetFileFullPath(current_filename),
+                pre_num
               )
             )
-            Snapper.RestoreFiles(previous_num, [current_file])
+            Snapper.RestoreFiles(pre_num, [current_filename])
           end
           next
+
         elsif ret == :restore
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
@@ -1228,39 +1165,35 @@ module Yast
                     "\n" +
                     "from snapshot '%2' to current system?"
                 ),
-                Snapper.GetFileFullPath(current_file),
+                Snapper.GetFileFullPath(current_filename),
                 snapshot_num
               )
             )
-            Snapper.RestoreFiles(snapshot_num, [current_file])
+            Snapper.RestoreFiles(snapshot_num, [current_filename])
           end
           next
-        elsif ret == :next
-          files2 = Convert.convert(
-            UI.QueryWidget(Id(:tree), :SelectedItems),
-            :from => "any",
-            :to   => "list <string>"
-          )
-          to_restore = []
-          files2 = Builtins.filter(files2) do |file|
-            if Builtins.haskey(files_index, file)
-              to_restore = Builtins.add(
-                to_restore,
-                String.EscapeTags(Snapper.GetFileFullPath(file))
-              )
-              next true
-            else
-              next false
-            end
-          end
 
-          if to_restore == []
+        elsif ret == :next
+
+          filenames = UI.QueryWidget(Id(:tree), :SelectedItems)
+          filenames.map!{ |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
+
+          # remove filenames not changed between the snapshots, e.g. /foo if
+          # only /foo/bar changed
+          filenames.delete_if { |filename| files_tree.find(filename[1..-1]).status == 0 }
+
+          if filenames.empty?
             # popup message
-            Popup.Message(_("No file was selected for restoring"))
+            Popup.Message(_("No file was selected for restoring."))
             next
           end
-          # popup headline
+
+          to_restore = filenames.map do |filename|
+            String.EscapeTags(Snapper.prepend_subvolume(filename))
+          end
+
           if Popup.AnyQuestionRichText(
+               # popup headline
               _("Restoring files"),
               # popup message, %1 is snapshot number, %2 list of files
               Builtins.sformat(
@@ -1272,8 +1205,8 @@ module Yast
                     "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
                     "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
                 ),
-                previous_num,
-                Builtins.mergestring(to_restore, "<br>")
+                pre_num,
+                to_restore.join("<br>")
               ),
               60,
               20,
@@ -1281,17 +1214,21 @@ module Yast
               Label.NoButton,
               :focus_no
             )
-            Snapper.RestoreFiles(previous_num, files2)
+            Snapper.RestoreFiles(pre_num, filenames)
             break
           end
           next
+
         else
           Builtins.y2error("unexpected retcode: %1", ret)
           next
         end
+
       end
 
       deep_copy(ret)
     end
+
   end
+
 end

@@ -17,9 +17,11 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.6
+Version:        3.1.7
 Release:        0
 Group:		System/YaST
+
+BuildArch:	noarch
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
@@ -27,15 +29,11 @@ Source0:        %{name}-%{version}.tar.bz2
 License:        GPL-2.0
 
 BuildRequires:	doxygen
-BuildRequires:	gcc-c++
-BuildRequires:	libbtrfs-devel
-BuildRequires:	libsnapper-devel >= 0.2.6
-BuildRequires:	libtool
 BuildRequires:	update-desktop-files
 BuildRequires:	yast2
-BuildRequires:	yast2-core-devel >= 2.23.1
 BuildRequires:	yast2-devtools >= 3.1.10
-BuildRequires:	yast2-testsuite
+BuildRequires:  rubygem(rspec)
+BuildRequires:	rubygem(ruby-dbus)
 
 Requires:	yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
@@ -48,7 +46,7 @@ Summary:	YaST - file system snapshots review
 Url:            http://github.com/yast/yast-snapper/
 
 %description
-YaST module for accessing and managing btrfs system snapshots
+YaST module for accessing and managing file-system snapshots
 
 %prep
 %setup -n %{name}-%{version}
@@ -64,8 +62,7 @@ YaST module for accessing and managing btrfs system snapshots
 %dir %{yast_yncludedir}/snapper
 %{yast_yncludedir}/snapper/*
 %{yast_clientdir}/snapper.rb
-%{yast_moduledir}/Snapper.*
+%{yast_moduledir}/Snapper.rb
+%{yast_moduledir}/SnapperDbus.rb
 %{yast_desktopdir}/snapper.desktop
-%{yast_scrconfdir}/*.scr
-%{yast_plugindir}/libpy2ag_snapper*
 %doc %{yast_docdir}

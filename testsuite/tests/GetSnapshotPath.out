@@ -1,5 +1,0 @@
-Read	.snapper.path $["num":0] nil
-Log	Snapshot '0' was not found.
-Return	
-Read	.snapper.path $["num":0] "/snapshots/0/snapshot"
-Return	/snapshots/0/snapshot

@@ -1,5 +1,5 @@
 Makefile
-Makefile.am
+/Makefile.am
 Makefile.in
 *.m4
 autom4te.cache
@@ -28,3 +28,4 @@ package/*.bz2
 tmp.*
 *.log
 *.ybc
+test-driver
