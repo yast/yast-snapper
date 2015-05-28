@@ -6,8 +6,9 @@ require "yast"
 
 Yast.import "Snapper"
 
-describe Yast::Tree do
-  subject { Yast::Tree.new("", nil) }
+describe Yast::SnapperClass::Tree do
+
+  subject { Yast::SnapperClass::Tree.new("", nil) }
 
   describe "#each" do
     it "calls block for all subtrees of instance" do

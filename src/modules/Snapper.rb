@@ -30,104 +30,6 @@ require "yast"
 
 module Yast
 
-
-  class Tree
-    attr_accessor :name, :status
-    attr_reader :children
-
-    def initialize(name, parent)
-      @name = name
-      @status = 0
-      @parent = parent
-      @children = []
-    end
-
-    def each()
-      if @parent != nil
-        yield self
-      end
-      @children.each do |subtree|
-        subtree.each do |e|
-          yield e
-        end
-      end
-    end
-
-    def fullname()
-      return @parent ? @parent.fullname() + "/" + @name : @name
-    end
-
-    def created?()
-      return @status & 0x01 != 0
-    end
-
-    def deleted?()
-      return @status & 0x02 != 0
-    end
-
-
-    def icon()
-      if @status == 0
-        return "yast-gray-dot.png"
-      elsif created?
-        return "yast-green-dot.png"
-      elsif deleted?
-        return "yast-red-dot.png"
-      else
-        return "yast-yellow-dot.png"
-      end
-    end
-
-
-    def add(fullname, status)
-
-      a, b = fullname.split("/", 2)
-      return add(b, status) if fullname.start_with? "/" #leading /
-
-      i = @children.index{ |x| x.name == a }
-
-      if i
-        if b
-          @children[i].add(b, status)
-        else
-          @children[i].status = status
-        end
-      else
-        subtree = Tree.new(a, self)
-        if b
-          subtree.add(b, status)
-        else
-          subtree.status = status
-        end
-        @children << subtree
-      end
-
-    end
-
-
-    def find(fullname)
-
-      a, b = fullname.split("/", 2)
-      return find(b) if fullname.start_with? "/" #leading /
-
-      i = @children.index{ |x| x.name == a }
-
-      if !i
-        return nil
-      end
-
-      if !b
-        return @children[i]
-      else
-        return @children[i].find(b)
-      end
-
-    end
-
-
-  end
-
-
   class SnapperClass < Module
 
     include Yast::Logger
@@ -612,6 +514,107 @@ tool can be used to create configurations."))
       end.to_h
     end
 
+
+    private
+
+    class Tree
+
+      attr_accessor :name, :status
+      attr_reader :children
+
+      def initialize(name, parent)
+        @name = name
+        @status = 0
+        @parent = parent
+        @children = []
+      end
+
+      def each()
+        if @parent != nil
+          yield self
+        end
+        @children.each do |subtree|
+          subtree.each do |e|
+            yield e
+          end
+        end
+      end
+
+      def fullname()
+        return @parent ? @parent.fullname() + "/" + @name : @name
+      end
+
+      def created?()
+        return @status & 0x01 != 0
+      end
+
+      def deleted?()
+        return @status & 0x02 != 0
+      end
+
+
+      def icon()
+        if @status == 0
+          return "yast-gray-dot.png"
+        elsif created?
+          return "yast-green-dot.png"
+        elsif deleted?
+          return "yast-red-dot.png"
+        else
+          return "yast-yellow-dot.png"
+        end
+      end
+
+
+      def add(fullname, status)
+
+        a, b = fullname.split("/", 2)
+        return add(b, status) if fullname.start_with? "/" #leading /
+
+        i = @children.index{ |x| x.name == a }
+
+        if i
+          if b
+            @children[i].add(b, status)
+          else
+            @children[i].status = status
+          end
+        else
+          subtree = Tree.new(a, self)
+          if b
+            subtree.add(b, status)
+          else
+            subtree.status = status
+          end
+          @children << subtree
+        end
+
+      end
+
+
+      def find(fullname)
+
+        a, b = fullname.split("/", 2)
+        return find(b) if fullname.start_with? "/" #leading /
+
+        i = @children.index{ |x| x.name == a }
+
+        if !i
+          return nil
+        end
+
+        if !b
+          return @children[i]
+        else
+          return @children[i].find(b)
+        end
+
+      end
+
+    end
+
+
+    public
 
     publish :variable => :snapshots, :type => "list <map>"
     publish :variable => :selected_snapshot, :type => "map"
