@@ -40,68 +40,6 @@ module Yast
     end
 
 
-    # Escape a String or Hash for snapperd. See snapper dbus documentation for details.
-    def escape(str)
-
-      ret = str.dup
-
-      if ret.is_a?(::String)
-
-        ret.force_encoding(Encoding::ASCII_8BIT)
-        ret.gsub!(/(\\|[\x80-\xff])/n) do |tmp|
-          if tmp == "\\"
-            "\\\\"
-          else
-            "\\x" + tmp[0].ord.to_s(16)
-          end
-        end
-
-      elsif ret.is_a?(Hash)
-
-        ret = ret.map { |k, v| [ escape(k), escape(v) ] }.to_h
-
-      elsif
-
-        raise RuntimeError, "cannot escape object"
-
-      end
-
-      return ret
-
-    end
-
-
-    # Unescape a String or Hash from snapperd. See snapper dbus documentation for details.
-    def unescape(str)
-
-      ret = str.dup
-
-      if ret.is_a?(::String)
-
-        ret.force_encoding(Encoding::ASCII_8BIT)
-        ret.gsub!(/\\(\\|x\h\h)/n) do |tmp|
-          if tmp == "\\\\"
-            "\\"
-          else
-            tmp[2,2].hex.chr
-          end
-        end
-
-      elsif ret.is_a?(Hash)
-
-        ret = ret.map { |k, v| [ unescape(k), unescape(v) ] }.to_h
-
-      elsif
-
-        raise RuntimeError, "cannot unescape object"
-
-      end
-
-      return ret
-
-    end
-
-
     def list_configs
       result = @dbus_object.ListConfigs().first
       log.debug("list_configs result:#{result}")
@@ -231,6 +169,70 @@ module Yast
       result.map do |file|
         { "filename" => unescape(file[0]), "status" => file[1] }
       end
+    end
+
+
+    private
+
+    # Escape a String or Hash for snapperd. See snapper dbus documentation for details.
+    def escape(str)
+
+      ret = str.dup
+
+      if ret.is_a?(::String)
+
+        ret.force_encoding(Encoding::ASCII_8BIT)
+        ret.gsub!(/(\\|[\x80-\xff])/n) do |tmp|
+          if tmp == "\\"
+            "\\\\"
+          else
+            "\\x" + tmp[0].ord.to_s(16)
+          end
+        end
+
+      elsif ret.is_a?(Hash)
+
+        ret = ret.map { |k, v| [ escape(k), escape(v) ] }.to_h
+
+      elsif
+
+        raise RuntimeError, "cannot escape object"
+
+      end
+
+      return ret
+
+    end
+
+
+    # Unescape a String or Hash from snapperd. See snapper dbus documentation for details.
+    def unescape(str)
+
+      ret = str.dup
+
+      if ret.is_a?(::String)
+
+        ret.force_encoding(Encoding::ASCII_8BIT)
+        ret.gsub!(/\\(\\|x\h\h)/n) do |tmp|
+          if tmp == "\\\\"
+            "\\"
+          else
+            tmp[2,2].hex.chr
+          end
+        end
+
+      elsif ret.is_a?(Hash)
+
+        ret = ret.map { |k, v| [ unescape(k), unescape(v) ] }.to_h
+
+      elsif
+
+        raise RuntimeError, "cannot unescape object"
+
+      end
+
+      return ret
+
     end
 
   end
