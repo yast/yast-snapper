@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.7
+Version:        3.1.8
 Release:        0
 Group:		System/YaST
 
@@ -37,10 +37,8 @@ BuildRequires:	rubygem(ruby-dbus)
 
 Requires:	yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
+Requires:	snapper
 Supplements:	packageand(snapper:yast2)
-
-# require the version of libsnapper used during build (bnc#845618)
-%requires_eq libsnapper2
 
 Summary:	YaST - file system snapshots review
 Url:            http://github.com/yast/yast-snapper/
