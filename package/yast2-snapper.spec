@@ -17,11 +17,12 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.8
+Version:        3.1.9
 Release:        0
 Group:		System/YaST
 
-BuildArch:	noarch
+# change to noarch causes problems according to behlert
+# BuildArch:	noarch
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source0:        %{name}-%{version}.tar.bz2
