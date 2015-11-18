@@ -94,6 +94,14 @@ module Yast
       ret
     end
 
+    
+    # grouped enable condition based on snapshot presence for modification widgets
+    def enable_snapshot_buttons(condition)
+      UI.ChangeWidget(Id(:show), :Enabled, condition) 
+      UI.ChangeWidget(Id(:modify), :Enabled, condition)
+      UI.ChangeWidget(Id(:delete), :Enabled, condition)
+    end
+
 
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
@@ -309,12 +317,12 @@ module Yast
       UI.ChangeWidget(
         Id("post"),
         :Enabled,
-        Ops.greater_than(Builtins.size(pre_items), 0)
+	!pre_items.empty?
       )
       UI.ChangeWidget(
         Id(:pre_list),
         :Enabled,
-        Ops.greater_than(Builtins.size(pre_items), 0)
+	!pre_items.empty?
       )
 
       ret = nil
@@ -465,11 +473,7 @@ module Yast
         Popup.ClearFeedback
 
         UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items.call)
-        UI.ChangeWidget(
-          Id(:show),
-          :Enabled,
-          Ops.greater_than(Builtins.size(snapshot_items), 0)
-        )
+	enable_snapshot_buttons(!snapshot_items.empty?)
 
         nil
       end
@@ -520,11 +524,11 @@ module Yast
       Wizard.HideAbortButton
 
       UI.SetFocus(Id(:snapshots_table))
-      UI.ChangeWidget(Id(:show), :Enabled, false) if snapshot_items == []
+      enable_snapshot_buttons(!snapshot_items.empty?)
       UI.ChangeWidget(
         Id(:configs),
         :Enabled,
-        Ops.greater_than(Builtins.size(configs), 1)
+	configs.size > 1
       )
 
       ret = nil
