@@ -317,12 +317,12 @@ module Yast
       UI.ChangeWidget(
         Id("post"),
         :Enabled,
-        Ops.greater_than(Builtins.size(pre_items), 0)
+	!pre_items.empty?
       )
       UI.ChangeWidget(
         Id(:pre_list),
         :Enabled,
-        Ops.greater_than(Builtins.size(pre_items), 0)
+	!pre_items.empty?
       )
 
       ret = nil
@@ -473,7 +473,7 @@ module Yast
         Popup.ClearFeedback
 
         UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items.call)
-	enable_snapshot_buttons(Ops.greater_than(Builtins.size(snapshot_items), 0))
+	enable_snapshot_buttons(!snapshot_items.empty?)
 
         nil
       end
@@ -524,11 +524,11 @@ module Yast
       Wizard.HideAbortButton
 
       UI.SetFocus(Id(:snapshots_table))
-      enable_snapshot_buttons(snapshot_items != [])
+      enable_snapshot_buttons(!snapshot_items.empty?)
       UI.ChangeWidget(
         Id(:configs),
         :Enabled,
-        Ops.greater_than(Builtins.size(configs), 1)
+	configs.size > 1
       )
 
       ret = nil
