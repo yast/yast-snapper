@@ -30,7 +30,6 @@ module Yast
 
     include Yast::Logger
 
-
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
 
@@ -45,29 +44,13 @@ module Yast
       Yast.import "String"
 
       Yast.include include_target, "snapper/helps.rb"
+
     end
 
 
     def timestring(t)
       return t.strftime("%F %T")
     end
-
-
-    def ReallyAbort
-      Popup.ReallyAbort(true)
-    end
-
-
-    # Read settings dialog
-    # @return `abort if aborted and `next otherwise
-    def ReadDialog
-      return :abort if !Confirm.MustBeRoot
-
-      Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
-      ret = Snapper.Init()
-      ret ? :next : :abort
-    end
-
 
     # transform userdata from widget to map
     def get_userdata(id)
@@ -85,81 +68,36 @@ module Yast
 
     # compare editable parts of snapshot maps
     def snapshot_modified(orig, new)
-      orig = deep_copy(orig)
-      new = deep_copy(new)
-      ret = false
-      Builtins.foreach(
-        Convert.convert(new, :from => "map", :to => "map <string, any>")
-      ) { |key, value| ret = ret || Ops.get(orig, key) != value }
-      ret
+      new.map do |k,v|
+        return true if orig[k] != v
+      end
+      false
     end
 
-    
     # grouped enable condition based on snapshot presence for modification widgets
-    def enable_snapshot_buttons(condition)
-      UI.ChangeWidget(Id(:show), :Enabled, condition) 
-      UI.ChangeWidget(Id(:modify), :Enabled, condition)
-      UI.ChangeWidget(Id(:delete), :Enabled, condition)
+    def enable_buttons(buttons, condition)
+      buttons.map do |b|
+        UI.ChangeWidget(Id(b), :Enabled, condition) 
+      end
     end
 
 
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
     def ModifySnapshotPopup(snapshot)
-      snapshot = deep_copy(snapshot)
       modified = false
-      num = Ops.get_integer(snapshot, "num", 0)
-      pre_num = Ops.get_integer(snapshot, "pre_num", num)
-      type = Ops.get_symbol(snapshot, "type", :none)
+      num = snapshot["num"] || 0
+      pre_num = snapshot["pre_num"] || num
+      type = snapshot["type"] || :none
 
-      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
-      pre_snapshot = Ops.get(Snapper.snapshots, pre_index, {})
-
-      snapshot_term = lambda do |prefix, data|
-        data = deep_copy(data)
-        HBox(
-          HSpacing(),
-          Frame(
-            "",
-            HBox(
-              HSpacing(0.4),
-              VBox(
-                # text entry label
-                InputField(
-                  Id(Ops.add(prefix, "description")),
-                  Opt(:hstretch),
-                  _("Description"),
-                  Ops.get_string(data, "description", "")
-                ),
-                # text entry label
-                InputField(
-                  Id(Ops.add(prefix, "userdata")),
-                  Opt(:hstretch),
-                  _("User data"),
-                  Snapper.userdata_to_string(data["userdata"])
-                ),
-                Left(
-                  ComboBox(
-                    Id(Ops.add(prefix, "cleanup")),
-                    Opt(:editable, :hstretch),
-                    # combo box label
-                    _("Cleanup algorithm"),
-                    cleanup_items(Ops.get_string(data, "cleanup", ""))
-                  )
-                )
-              ),
-              HSpacing(0.4)
-            )
-          ),
-          HSpacing()
-        )
-      end
+      pre_index = Snapper.id2index[pre_num] || 0
+      pre_snapshot = Snapper.snapshots[pre_index] || {}
 
       if type != :POST
         cont = VBox(
           # popup label, %{num} is number
           Label(_("Modify Snapshot %{num}") % { :num => num }),
-          snapshot_term.call("", snapshot)
+          snapshot_term("", snapshot)
         )
       else
         cont = VBox(
@@ -167,35 +105,16 @@ module Yast
           Label(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
           # label
           Left(Label(_("Pre (%{pre})") % { :pre => pre_num })),
-          snapshot_term.call("pre_", pre_snapshot),
+          snapshot_term("pre_", pre_snapshot),
           VSpacing(),
           # label
           Left(Label(_("Post (%{post})") % { :post => num })),
-          snapshot_term.call("", snapshot)
+          snapshot_term("", snapshot)
         )
       end
 
-      UI.OpenDialog(
-        Opt(:decorated),
-        HBox(
-          HSpacing(1),
-          VBox(
-            VSpacing(0.5),
-            HSpacing(65),
-            cont,
-            VSpacing(0.5),
-            ButtonBox(
-              PushButton(Id(:ok), Label.OKButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            ),
-            VSpacing(0.5)
-          ),
-          HSpacing(1)
-        )
-      )
+      open_modify_dialog(cont)
 
-      ret = nil
-      args = {}
       pre_args = {}
 
       while true
@@ -233,10 +152,9 @@ module Yast
     # Popup for creating new snapshot
     # @return true if new snapshot was created
     def CreateSnapshotPopup(pre_snapshots)
-      pre_snapshots = deep_copy(pre_snapshots)
       created = false
-      pre_items = Builtins.maplist(pre_snapshots) do |s|
-        Item(Id(s), Builtins.tostring(s))
+      pre_items = pre_snapshots.map do |s|
+        Item(Id(s), s.to_s)
       end
 
       UI.OpenDialog(
@@ -317,12 +235,12 @@ module Yast
       UI.ChangeWidget(
         Id("post"),
         :Enabled,
-	!pre_items.empty?
+      	!pre_items.empty?
       )
       UI.ChangeWidget(
         Id(:pre_list),
         :Enabled,
-	!pre_items.empty?
+      	!pre_items.empty?
       )
 
       ret = nil
@@ -343,32 +261,26 @@ module Yast
       created
     end
 
-
+    
     # Popup for deleting existing snapshot
     # @return true if snapshot was deleted
     def DeleteSnapshotPopup(snapshot)
-      snapshot = deep_copy(snapshot)
-      num = Ops.get_integer(snapshot, "num", 0)
-      pre_num = Ops.get_integer(snapshot, "pre_num", num)
-      type = Ops.get_symbol(snapshot, "type", :none)
+      num = snapshot["num"] || 0
+      pre_num = snapshot["pre_num"] || 0
+      type = snapshot["type"]
 
       if type != :POST
-
         # yes/no popup question
         if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
           return Snapper.DeleteSnapshot([ num ])
         end
-
       else
-
         # yes/no popup question
         if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
                        { :pre => pre_num, :post => num })
           return Snapper.DeleteSnapshot([ pre_num, num ])
         end
-
       end
-
       false
     end
 
@@ -379,143 +291,10 @@ module Yast
       # summary dialog caption
       caption = _("Snapshots")
 
-      snapshots = deep_copy(Snapper.snapshots)
-      configs = deep_copy(Snapper.configs)
-
-      snapshot_items = []
-      # lonely pre snapshots
-      pre_snapshots = []
-
-      # generate list of snapshot table items
-      get_snapshot_items = lambda do
-        i = -1
-        snapshot_items = []
-        pre_snapshots = []
-
-        Builtins.foreach(snapshots) do |s|
-          i = Ops.add(i, 1)
-          num = Ops.get_integer(s, "num", 0)
-          date = ""
-          if num != 0
-            date = timestring(s["date"])
-          end
-          userdata = Snapper.userdata_to_string(s["userdata"])
-          if Ops.get_symbol(s, "type", :none) == :SINGLE
-            snapshot_items = Builtins.add(
-              snapshot_items,
-              Item(
-                Id(i),
-                num,
-                _("Single"),
-                date,
-                "",
-                Ops.get_string(s, "description", ""),
-                userdata
-              )
-            )
-          elsif Ops.get_symbol(s, "type", :none) == :POST
-            pre = Ops.get_integer(s, "pre_num", 0) # pre canot be 0
-            index = Ops.get(Snapper.id2index, pre, -1)
-            if pre == 0 || index == -1
-              Builtins.y2warning(
-                "something wrong - pre:%1, index:%2",
-                pre,
-                index
-              )
-              next
-            end
-            desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
-            pre_date = timestring(Snapper.snapshots[index]["date"])
-            snapshot_items = Builtins.add(
-              snapshot_items,
-              Item(
-                Id(i),
-                "%{pre} & %{post}" % { :pre => pre, :post => num },
-                _("Pre & Post"),
-                pre_date,
-                date,
-                desc,
-                userdata
-              )
-            )
-          else
-            post = Ops.get_integer(s, "post_num", 0) # 0 means there's no post
-            if post == 0
-              Builtins.y2milestone("pre snappshot %1 does not have post", num)
-              snapshot_items = Builtins.add(
-                snapshot_items,
-                Item(
-                  Id(i),
-                  num,
-                  _("Pre"),
-                  date,
-                  "",
-                  Ops.get_string(s, "description", ""),
-                  userdata
-                )
-              )
-              pre_snapshots = Builtins.add(pre_snapshots, num)
-            else
-              Builtins.y2milestone("skipping pre snapshot: %1", num)
-            end
-          end
-        end
-        deep_copy(snapshot_items)
-      end
-
       # update list of snapshots
-      update_snapshots = lambda do
-        # busy popup message
-        Popup.ShowFeedback("", _("Reading list of snapshots..."))
-
-        Snapper.ReadSnapshots()
-        snapshots = deep_copy(Snapper.snapshots)
-        Popup.ClearFeedback
-
-        UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items.call)
-	enable_snapshot_buttons(!snapshot_items.empty?)
-
-        nil
-      end
-
-
-      contents = VBox(
-        HBox(
-          # combo box label
-          Label(_("Current Configuration")),
-          ComboBox(Id(:configs), Opt(:notify), "", Builtins.maplist(configs) do |config|
-            Item(Id(config), config, config == Snapper.current_config)
-          end),
-          HStretch()
-        ),
-        Table(
-          Id(:snapshots_table),
-          Opt(:notify, :keepSorting),
-          Header(
-            # table header
-            _("ID"),
-            _("Type"),
-            _("Start Date"),
-            _("End Date"),
-            _("Description"),
-            _("User Data")
-          ),
-          get_snapshot_items.call
-        ),
-        HBox(
-          # button label
-          PushButton(Id(:show), Opt(:default), _("Show Changes")),
-          PushButton(Id(:create), Label.CreateButton),
-          # button label
-          PushButton(Id(:modify), _("Modify")),
-          PushButton(Id(:delete), Label.DeleteButton),
-          HStretch()
-        )
-      )
-
       Wizard.SetContentsButtons(
         caption,
-        contents,
+        snapshots_table,
         Ops.get_string(@HELPS, "summary", ""),
         Label.BackButton,
         Label.CloseButton
@@ -524,20 +303,14 @@ module Yast
       Wizard.HideAbortButton
 
       UI.SetFocus(Id(:snapshots_table))
-      enable_snapshot_buttons(!snapshot_items.empty?)
-      UI.ChangeWidget(
-        Id(:configs),
-        :Enabled,
-	configs.size > 1
-      )
+      enable_buttons([:show, :modify, :delete], !get_snapshot_items.empty?)
+      enable_buttons([:configs], Snapper.configs.size > 1)
 
       ret = nil
       while true
         ret = UI.UserInput
 
-        selected = Convert.to_integer(
-          UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
-        )
+        selected = UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
 
         if ret == :abort || ret == :cancel || ret == :back
           if ReallyAbort()
@@ -547,7 +320,7 @@ module Yast
           end
 
         elsif ret == :show
-          if Ops.get(snapshots, [selected, "type"]) == :PRE
+          if Ops.get(Snapper.snapshots, [selected, "type"]) == :PRE
             # popup message
             Popup.Message(
               _(
@@ -557,38 +330,40 @@ module Yast
             next
           end
           # `POST snapshot is selected from the pair
-          Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
+          Snapper.selected_snapshot = Ops.get(Snapper.snapshots, selected, {})
           break
 
         elsif ret == :configs
           config = Convert.to_string(UI.QueryWidget(Id(ret), :Value))
           if config != Snapper.current_config
             Snapper.current_config = config
-            update_snapshots.call
+            update_snapshots
             next
           end
 
         elsif ret == :create
-          if CreateSnapshotPopup(pre_snapshots)
-            update_snapshots.call
+          if CreateSnapshotPopup(pre_lonely_snapshots)
+            update_snapshots
             next
           end
 
         elsif ret == :modify
-          if ModifySnapshotPopup(Ops.get(snapshots, selected, {}))
-            update_snapshots.call
+          if ModifySnapshotPopup(Ops.get(Snapper.snapshots, selected, {}))
+            update_snapshots
             next
           end
 
         elsif ret == :delete
-          if DeleteSnapshotPopup(Ops.get(snapshots, selected, {}))
-            update_snapshots.call
+          if DeleteSnapshotPopup(Ops.get(Snapper.snapshots, selected, {}))
+            update_snapshots
             next
           end
 
         elsif ret == :next
           break
-
+        elsif ret == :snapshots_table
+          enable_buttons([:show, :modify], selected.size == 1)
+          enable_buttons([:delete], selected.size >= 1)
         else
           Builtins.y2error("unexpected retcode: %1", ret)
           next
@@ -658,19 +433,16 @@ module Yast
       date = timestring(snapshot["date"])
       type = Ops.get_symbol(snapshot, "type", :NONE)
       combo_items = []
-      Builtins.foreach(Snapper.snapshots) do |s|
-        id = Ops.get_integer(s, "num", 0)
+      Snapper.snapshots.map do |s|
+        id = s["num"] || 0
         if id != snapshot_num
           # '%1: %2' means 'ID: description', adapt the order if necessary
-          combo_items = Builtins.add(
-            combo_items,
-            Item(
-              Id(id),
-              Builtins.sformat(
-                _("%1: %2"),
-                id,
-                Ops.get_string(s, "description", "")
-              )
+          combo_items << Item(
+            Id(id),
+            Builtins.sformat(
+              _("%1: %2"),
+              id,
+              Ops.get_string(s, "description", "")
             )
           )
         end
@@ -1231,6 +1003,195 @@ module Yast
       end
 
       deep_copy(ret)
+    end
+
+
+    private
+
+    def ReallyAbort
+      Popup.ReallyAbort(true)
+    end
+
+
+    # Read settings dialog
+    # @return `abort if aborted and `next otherwise
+    def ReadDialog
+      return :abort if !Confirm.MustBeRoot
+
+      Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
+      ret = Snapper.Init()
+      ret ? :next : :abort
+    end
+
+    def open_modify_dialog(content)
+      UI.OpenDialog(
+        Opt(:decorated),
+        HBox(
+          HSpacing(1),
+          VBox(
+            VSpacing(0.5),
+            HSpacing(65),
+            content,
+            VSpacing(0.5),
+            ButtonBox(
+              PushButton(Id(:ok), Label.OKButton),
+              PushButton(Id(:cancel), Label.CancelButton)
+            ),
+            VSpacing(0.5)
+          ),
+          HSpacing(1)
+        )
+      )
+    end
+
+    def snapshot_term(prefix, data)
+      data = deep_copy(data)
+      HBox(
+        HSpacing(),
+        Frame(
+          "",
+          HBox(
+            HSpacing(0.4),
+            VBox(
+              # text entry label
+              InputField(
+                Id(Ops.add(prefix, "description")),
+                Opt(:hstretch),
+                _("Description"),
+                Ops.get_string(data, "description", "")
+              ),
+              # text entry label
+              InputField(
+                Id(Ops.add(prefix, "userdata")),
+                Opt(:hstretch),
+                _("User data"),
+                Snapper.userdata_to_string(data["userdata"])
+              ),
+              Left(
+                ComboBox(
+                  Id(Ops.add(prefix, "cleanup")),
+                  Opt(:editable, :hstretch),
+                  # combo box label
+                  _("Cleanup algorithm"),
+                  cleanup_items(Ops.get_string(data, "cleanup", ""))
+                )
+              )
+            ),
+            HSpacing(0.4)
+          )
+        ),
+        HSpacing()
+      )
+    end
+
+    def update_snapshots
+      # busy popup message
+      Popup.ShowFeedback("", _("Reading list of snapshots..."))
+
+      Snapper.ReadSnapshots()
+
+      Popup.ClearFeedback
+
+      snapshot_items = get_snapshot_items
+      UI.ChangeWidget(Id(:snapshots_table), :Items, snapshot_items)
+      selected = UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
+      enable_buttons([:modify, :show, :delete], !snapshot_items.empty?)
+    end
+
+    def get_snapshot_items
+      snapshot_items = []
+
+      Snapper.snapshots.each_with_index do |s,i|
+        num = s["num"] || 0
+        start_date = (num != 0) ? timestring(s["date"]) : ""
+        end_date = ""
+        userdata = Snapper.userdata_to_string(s["userdata"])
+        desc = s["description"].to_s
+        if s["type"] == :SINGLE
+          type = _("Single")
+        elsif s["type"] == :POST
+          pre = s["pre_num"] || 0 # pre canot be 0
+          index = Ops.get(Snapper.id2index, pre, -1)
+          if pre == 0 || index == -1
+            Builtins.y2warning(
+              "something wrong - pre:%1, index:%2",
+              pre,
+              index
+            )
+            next
+          end
+          desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
+          end_date = start_date
+          start_date = timestring(Snapper.snapshots[index]["date"])
+          num = "%{pre} & %{post}" % { :pre => pre, :post => num }
+          type = _("Pre & Post")
+        else
+          # 0 means there's no post
+          if s["post_num"].to_i == 0
+            Builtins.y2milestone("pre snappshot %1 does not have post", num)
+            type = _("Pre")
+          else
+            Builtins.y2milestone("skipping pre snapshot: %1", num)
+            next
+          end
+        end
+        snapshot_items << Item(Id(i), num, type, start_date, end_date, desc, userdata)
+      end
+      snapshot_items
+    end
+
+    def config_select
+      HBox(
+        # combo box label
+        Label(_("Current Configuration")),
+        ComboBox(Id(:configs), Opt(:notify), "", Builtins.maplist(Snapper.configs) do |config|
+          Item(Id(config), config, config == Snapper.current_config)
+        end),
+        HStretch()
+      )
+    end
+
+    def snapshots_table
+      VBox(
+        config_select,
+        Table(
+          Id(:snapshots_table),
+          Opt(:notify, :keepSorting),
+          Header(
+            # table header
+            _("ID"),
+            _("Type"),
+            _("Start Date"),
+            _("End Date"),
+            _("Description"),
+            _("User Data")
+          ),
+          get_snapshot_items
+        ),
+        snapshots_table_footer
+      )
+    end
+
+    def snapshots_table_footer
+      HBox(
+        # button label
+        PushButton(Id(:show), Opt(:default), _("Show Changes")),
+        PushButton(Id(:create), Label.CreateButton),
+        # button label
+        PushButton(Id(:modify), _("Modify")),
+        PushButton(Id(:delete), Label.DeleteButton),
+        HStretch()
+      )
+    end
+
+    def selected_snapshots(selection)
+      selection.map do |s|
+        Snapper.snapshots[s]
+      end
+    end
+
+    def pre_lonely_snapshots
+      Snapper.snapshots.select {|s| (s["type"] == :PRE) && (s["post_num"].to_i == 0) }.map {|s| s["num"]}
     end
 
   end
