@@ -264,24 +264,27 @@ module Yast
     
     # Popup for deleting existing snapshot
     # @return true if snapshot was deleted
-    def DeleteSnapshotPopup(snapshot)
-      num = snapshot["num"] || 0
-      pre_num = snapshot["pre_num"] || 0
-      type = snapshot["type"]
-
-      if type != :POST
-        # yes/no popup question
-        if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
-          return Snapper.DeleteSnapshot([ num ])
-        end
-      else
-        # yes/no popup question
-        if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
-                       { :pre => pre_num, :post => num })
-          return Snapper.DeleteSnapshot([ pre_num, num ])
+    def DeleteSnapshotPopup(snapshots)
+      snaps = []
+      post_snaps = []
+      snapshots.map do |s|
+        if s["type"] != :POST
+          snaps << s["num"]  
+        else
+          post_snaps << {:pre_num => s["pre_num"], :num => s["num"]}
         end
       end
-      false
+      
+      nums = snaps + post_snaps.map {|k| "#{k[:pre_num]}&#{k[:num]}"}
+
+      # yes/no popup question
+      if Popup.YesNo(_("You have selected those snapshots: %{nums}" % { :nums => nums.join(",") } ))
+        Snapper.DeleteSnapshot(snaps)
+        post_snaps.map do |k|
+          Snapper.DeleteSnapshot([k[:pre_num], k[:num]])
+        end
+        true
+      end
     end
 
 
@@ -303,14 +306,22 @@ module Yast
       Wizard.HideAbortButton
 
       UI.SetFocus(Id(:snapshots_table))
-      enable_buttons([:show, :modify, :delete], !get_snapshot_items.empty?)
+      selected = UI.QueryWidget(Id(:snapshots_table), :SelectedItems) || []
+      enable_buttons([:show, :modify], selected.size == 1)
+      enable_buttons([:delete], selected.size >= 1)
       enable_buttons([:configs], Snapper.configs.size > 1)
 
       ret = nil
       while true
         ret = UI.UserInput
 
-        selected = UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
+        selected = UI.QueryWidget(Id(:snapshots_table), :SelectedItems) || []
+
+        # It not should be possible but defensive checking
+        if (ret == :modify || ret == :show) and not selected.size == 1
+          Popup.Message(_("You must select at least one snapshot.."))
+          next
+        end
 
         if ret == :abort || ret == :cancel || ret == :back
           if ReallyAbort()
@@ -320,7 +331,8 @@ module Yast
           end
 
         elsif ret == :show
-          if Ops.get(Snapper.snapshots, [selected, "type"]) == :PRE
+
+          if Ops.get(Snapper.snapshots, [selected.first, "type"]) == :PRE
             # popup message
             Popup.Message(
               _(
@@ -330,7 +342,7 @@ module Yast
             next
           end
           # `POST snapshot is selected from the pair
-          Snapper.selected_snapshot = Ops.get(Snapper.snapshots, selected, {})
+          Snapper.selected_snapshot = Ops.get(Snapper.snapshots, selected.first, {})
           break
 
         elsif ret == :configs
@@ -348,13 +360,14 @@ module Yast
           end
 
         elsif ret == :modify
-          if ModifySnapshotPopup(Ops.get(Snapper.snapshots, selected, {}))
+          
+          if ModifySnapshotPopup(Ops.get(Snapper.snapshots, selected.first, {}))
             update_snapshots
             next
           end
 
         elsif ret == :delete
-          if DeleteSnapshotPopup(Ops.get(Snapper.snapshots, selected, {}))
+          if DeleteSnapshotPopup(selected_snapshots(selected))
             update_snapshots
             next
           end
@@ -1092,10 +1105,11 @@ module Yast
 
       Popup.ClearFeedback
 
-      snapshot_items = get_snapshot_items
-      UI.ChangeWidget(Id(:snapshots_table), :Items, snapshot_items)
-      selected = UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
-      enable_buttons([:modify, :show, :delete], !snapshot_items.empty?)
+      UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items)
+      selected = UI.QueryWidget(Id(:snapshots_table), :SelectedItems) || []
+      enable_buttons([:modify, :show, :delete], selected.size == 1)
+      enable_buttons([:delete], selected.size >= 1)
+
     end
 
     def get_snapshot_items
@@ -1156,7 +1170,7 @@ module Yast
         config_select,
         Table(
           Id(:snapshots_table),
-          Opt(:notify, :keepSorting),
+          Opt(:notify, :keepSorting, :multiSelection, :immediate),
           Header(
             # table header
             _("ID"),
