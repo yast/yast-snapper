@@ -7,7 +7,6 @@ require "yast"
 Yast.import "Snapper"
 
 describe Yast::SnapperClass::Tree do
-
   subject { Yast::SnapperClass::Tree.new("", nil) }
 
   describe "#each" do
