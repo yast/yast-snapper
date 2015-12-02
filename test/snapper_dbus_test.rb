@@ -7,7 +7,7 @@ require "yast"
 
 Yast.import "Snapper"
 
-describe "SnapperDbusClass" do
+describe Yast::SnapperDbus do
 
   describe "#escape" do
 

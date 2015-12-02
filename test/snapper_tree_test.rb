@@ -118,7 +118,7 @@ describe Yast::SnapperClass::Tree do
   end
 
   describe "#find" do
-    it "return node matching full name" do
+    it "returns node matching full name" do
       root = subject
       root.add("a", 0)
       ch1 = root.children.first

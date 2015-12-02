@@ -61,7 +61,7 @@ module Yast
       1 => :PRE,
       2 => :POST
     }
-
+   
     def list_snapshots(config_name)
       result = @dbus_object.ListSnapshots(config_name).first
       log.debug("list_snapshots for name #{config_name} result:#{result}")
@@ -82,7 +82,6 @@ module Yast
       log.debug("list_snapshots ret:#{ret}")
 
       return ret
-
     end
 
 

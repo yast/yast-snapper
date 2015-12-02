@@ -25,15 +25,15 @@ describe "Yast::SnapperDialogsInclude" do
       expect(subject.snapshot_modified(orig, {})).to eq false
     end
        
-     it "return false if the hashes are equal" do
+     it "returns false if the hashes are equal" do
        expect(subject.snapshot_modified(orig, orig)).to eq false
      end
    
-    it "return true if some value has changed" do
+    it "returns true if some value has changed" do
       expect(subject.snapshot_modified(orig, {:num => 4, :post_num => 2})).to eq true
      end
    
-    it "return true if new keys has been added" do
+    it "returns true if new keys has been added" do
        expect(subject.snapshot_modified(orig, {:num => 1 , :description => "desc"})).to eq true
     end
   end

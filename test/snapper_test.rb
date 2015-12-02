@@ -7,7 +7,7 @@ require "yast"
 Yast.import "Snapper"
 
 
-describe "Yast::Snapper" do
+describe Yast::Snapper do
   SNAPSHOT_DATE = "2015/07/11 12:30:00 +0100"
 
   describe "#string_to_userdata" do
@@ -68,11 +68,11 @@ describe "Yast::Snapper" do
         allow(Yast::SnapperDbus).to receive(:list_snapshots).with("snap_var")
       end
       
-      it "return the first config read" do
+      it "returns the first config read" do
         expect(Yast::Snapper.ReadConfigs).to eq "snap_opt"
       end
   
-      it "initialize configs correctly" do
+      it "initializes configs correctly" do
         Yast::Snapper.ReadConfigs
         expect(Yast::Snapper.configs).to include "snap_var"
         expect(Yast::Snapper.configs).to include "snap_opt"
