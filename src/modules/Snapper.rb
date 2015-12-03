@@ -27,6 +27,7 @@
 # Input and output routines.
 
 require "yast"
+require_relative '../lib/snapper/snapshot'
 
 module Yast
 
