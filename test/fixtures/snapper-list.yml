@@ -1,6 +1,6 @@
 ---
 var:
-  - 
+  -
     - 0
     - 0
     - 0
@@ -17,7 +17,7 @@ var:
     - 0
     - zypp(y2base)
     - number
-    - 
+    -
       important: 'no'
   -
     - 3
@@ -47,7 +47,7 @@ var:
     - number
     - important: 'no'
 opt:
-  - 
+  -
     - 0
     - 0
     - 0
