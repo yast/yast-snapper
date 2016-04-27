@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 # ------------------------------------------------------------------------------
-# Copyright (c) 2015 SUSE LLC. All Rights Reserved.
+# Copyright (c) 2016 SUSE LLC. All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of version 2 of the GNU General Public License as published by the
@@ -19,78 +19,181 @@
 # ------------------------------------------------------------------------------
 
 require "yast"
-require_relative "snapshot_dbus"
+require "snapper/snapshot_dbus"
 
-module Yast2
-  module Snapper
-    class Snapshot
-      
-      include Yast::Logger
+module Yast
+  ##
+  # This class represents the base class for Snapshots mostly based on Snapper
+  # ones.
+  class Snapshot
+    include Yast::Logger
 
-      attr_accessor :number, :type, :pre_number, :timestamp, :user, :description, :cleanup_algo, :user_data, :number, :config, :strategy
+    attr_reader :number, :pre_number, :timestamp, :user
 
-      STRATEGIES = { :dbus => SnapshotDBus }
-      TYPES = [:pre, :post, :single]
+    attr_accessor :description, :cleanup, :user_data, :config, :communication
 
-      def initialize(number, type, pre_number, timestamp, user, cleanup_algo, description, user_data, config = "root", strategy = SnapshotDBus)
-        @number = number
-        @type = type
-        @pre_number = pre_number
-        @timestamp = timestamp
-        @user = user
-        @cleanup_algo = cleanup_algo
-        @description = description
-        @user_data = user_data
-        @strategy = strategy.new(self) 
-        @config = config
+    class << self
+      # @return [Hash] Mapping string with available subclass
+      def types
+        { "single" => SingleSnapshot, "post" => PostSnapshot, "pre" => PreSnapshot }
       end
 
-      
-      def post(configs=nil, custom_strategy = Snapshot.default_strategy)
-        Snapshot.all(config, custom_strategy).find {|s| s.pre_number == self.number }
+      # @return default strategy responsable of talk with the underlying system
+      def default_communication(context = nil)
+        SnapshotDBus.new(context)
       end
 
-      def pre(configs=nil, custom_strategy = Snapshot.default_strategy)
-        @previous ||= @pre_number ? Snapshot.find(self.pre_number, configs, custom_strategy) : nil
-      end     
-
-      alias_method :previous, :pre
-
-      TYPES.map do |t|
-        define_method "#{t}?" do
-          type == t || type == t.upcase
+      # @return [Array] of Snapshots
+      def all(configs = nil, communication = default_communication)
+        communication.all(configs).map do |attrs|
+          new_by_type(attrs)
         end
       end
 
-      class << self
-        def default_strategy
-          STRATEGIES[:dbus]
-        end
-
-        def all(configs = nil, strategy = Snapshot.default_strategy)
-          strategy.all(configs)
-        end
-
-        def find(number, configs = nil, strategy = Snapshot.default_strategy)
-          strategy.all(configs).find {|s| s.number == number }
-        end
-
-        def create_single(config_name, description, cleanup, user_data = {}, strategy = Snapshot.default_strategy)
-          num = strategy.create_single(config_name, description, cleanup, user_data)   
-          num ? find(num, config_name) : nil
-        end
-
-        def create_pre(config_name, description, cleanup, user_data = {}, strategy = Snapshot.default_strategy)
-          num = strategy.create_pre(config_name, description, cleanup, user_data)   
-          num ? find(num, config_name) : nil
-        end
-
-        def create_post(config_name, pre_number, description, cleanup, user_data = {}, strategy = Snapshot.default_strategy)
-          num = strategy.create_post(config_name, description, cleanup, user_data)
-          num ? find(num, config_name) : nil
-        end
-
+      def find(number, configs = nil, communication = default_communication)
+        all(configs, communication).find { |s| s.number == number }
       end
+
+      def new_by_type(attrs)
+        types[attrs[:type]].new(attrs)
+      end
+
+      def get_modified_files(from, to, communication = default_communication)
+        communication.get_modified_files(from, to)
+      end
+
+      def list_configs(communication = default_communication)
+        communication.list_configs
+      end
+
+      def get_config(config, communication = default_communication)
+        communication.get_config(config)
+      end
+    end
+
+    # Generic constructor
+    def initialize(attrs = {})
+      raise "No instantiable class" if self.class == Yast::Snapshot
+      @number = attrs[:number]
+      @timestamp = attrs[:timestamp]
+      @user = attrs[:uid]
+      # CleanUp algorithm
+      @cleanup = attrs[:cleanup] || "timeline"
+      @description = attrs[:description] || ""
+      @user_data = attrs[:user_data] || {}
+      @communication =
+        attrs[:communication] || Snapshot.default_communication(self)
+      @config = attrs[:config] || Snapshot.list_configs
+    end
+
+    def save
+      if number.nil?
+        create
+      else
+        update
+      end
+    end
+
+    def name
+      "Snapshot"
+    end
+
+    def valid?
+      true
+    end
+
+    def pre?
+      false
+    end
+
+    def post?
+      false
+    end
+
+    def single?
+      false
+    end
+
+    def user_data_to_s
+      user_data.map { |k, v| "#{k}=#{v}" }.join(", ")
+    end
+
+    def date
+      timestamp.strftime("%F %T")
+    end
+
+    def update(attrs = {})
+      log.info "Updating #{inspect} with #{attrs.inspect}"
+      attrs.each { |k, v| send("#{k}=", v) }
+
+      communication.update
+
+      true
+    end
+
+    def mount_point
+      communication.mount_point
+    end
+
+    def create(communication = self.communication)
+      num = communication.create
+      num ? Snapshot.find(num, config).number : nil
+    end
+
+    def delete(communication = self.communication)
+      communication.delete
+    end
+  end
+
+  class SingleSnapshot < Snapshot
+    def name
+      "Single"
+    end
+
+    def single?
+      true
+    end
+  end
+
+  class PreSnapshot < Snapshot
+    def name
+      "Pre"
+    end
+
+    def pre?
+      true
+    end
+
+    def post(configs = nil, custom_communication = communication)
+      Snapshot.all(configs, custom_communication).find { |s| s.pre_number == number }
+    end
+  end
+
+  class PostSnapshot < Snapshot
+    def name
+      "Post"
+    end
+
+    def initialize(attrs = {})
+      @pre_number = attrs[:pre_number]
+
+      super(attrs)
+    end
+
+    def post?
+      true
+    end
+
+    def valid?
+      if !pre
+        log.info "There is no PreSnapshot for PostSnapshot #{inspect}"
+        return false
+      end
+      true
+    end
+
+    def pre(configs = nil, custom_communication = communication)
+      @previous ||= pre_number ? Snapshot.find(pre_number, configs, custom_communication) : nil
     end
   end
 end
