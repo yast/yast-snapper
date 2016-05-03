@@ -26,7 +26,7 @@
 
 module Yast
   module SnapperHelpsInclude
-    def initialize_snapper_helps(include_target)
+    def initialize_snapper_helps(_include_target)
       textdomain "snapper"
 
       # All helps are here
@@ -37,35 +37,42 @@ module Yast
         ),
         # Summary dialog help:
         "summary"     => _(
-          "<p><b><big>Snapshots Configuration</big></b><p>\n" +
-            "<p>The table shows a list of root filesystem snapshots. There are three types\n" +
-            "of snapshots, <b>single</b>, <b>pre</b> and <b>post</b>. Single snapshots are\n" +
-            "used for storing the file system state in a certain time, while Pre and Post are used to define the changes done by special operation performed between taking those two snapshots. Pre and Post snapshots are paired together in the table.</p>\n" +
-            "<p>Select a snapshot or snapshot pair and click <b>Show Changes</b> to see the\n" +
+          "<p><b><big>Snapshots Configuration</big></b><p>\n" \
+            "<p>The table shows a list of root filesystem snapshots. There are three types\n" \
+            "of snapshots, <b>single</b>, <b>pre</b> and <b>post</b>. Single snapshots are\n" \
+            "used for storing the file system state in a certain time, while Pre and Post "   \
+            "are used to define the changes done by special operation performed between "     \
+            "taking those two snapshots. Pre and Post snapshots are paired together in the table.</p>\n" \
+            "<p>Select a snapshot or snapshot pair and click <b>Show Changes</b> to see the\n" \
             "new file system changes in the specified snapshot.</p>\n"
         ),
         # Show snapshot dialog help
-        "show_pair" => _(
-          "<p><b><big>Snapshot Overview</big></b><p>\n" +
-            "<p>\n" +
-            "The tree shows all the files that were modified between creating the first ('pre') and second ('post') snapshot. On the right side, you see the description generated when the first snapshot was created and the time of creation for both snapshots.\n" +
-            "</p>\n" +
-            "<p>\n" +
-            "When a file is selected in the tree, you see the changes done to it. By default, changes between selected paired snapshots are shown, but it is possible to compare the file with different versions.\n" +
+        "show_pair"   => _(
+          "<p><b><big>Snapshot Overview</big></b><p>\n" \
+            "<p>\n" \
+            "The tree shows all the files that were modified between creating the first ('pre') " \
+            "and second ('post') snapshot. On the right side, you see the description generated " \
+            "when the first snapshot was created and the time of creation for both snapshots.\n"  \
+            "</p>\n" \
+            "<p>\n" \
+            "When a file is selected in the tree, you see the changes done to it. By default, "   \
+            "changes between selected paired snapshots are shown, but it is possible to compare " \
+            "the file with different versions.\n" \
             "</p>\n"
         ),
         # Show snapshot dialog help, alternative for single snapshots
         "show_single" => _(
-          "<p><b><big>Snapshot Overview</big></b><p>\n" +
-            "<p>\n" +
-            "The tree shows all the files that differ in a selected snapshot and the current system. On the right side, you see the snapshot description and time of its creation.\n" +
-            "</p>\n" +
-            "<p>\n" +
-            "When a file is selected in the tree, you can see the its difference between snapshot version and current system.\n" +
+          "<p><b><big>Snapshot Overview</big></b><p>\n" \
+            "<p>\n" \
+            "The tree shows all the files that differ in a selected snapshot and the current " \
+            "system. On the right side, you see the snapshot description and time of its creation.\n" \
+            "</p>\n" \
+            "<p>\n" \
+            "When a file is selected in the tree, you can see the its difference between "     \
+            "snapshot version and current system.\n" \
             "</p>\n"
         )
-      } 
-
+      }
       # EOF
     end
   end
