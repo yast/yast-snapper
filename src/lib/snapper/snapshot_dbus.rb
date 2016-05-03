@@ -46,15 +46,15 @@ module Yast
         list_snapshots(config).each do |dbus_snapshot|
           next if dbus_snapshot[0] == 0
           snapshot_list << {
-            type:         SNAPSHOT_ID[dbus_snapshot[1]],
-            number:       dbus_snapshot[0],
-            pre_number:   dbus_snapshot[2].to_i,
-            timestamp:    Time.at(dbus_snapshot[3]),
-            uid:          dbus_snapshot[4],
-            description:  unescape(dbus_snapshot[5]),
-            cleanup_algo: unescape(dbus_snapshot[6]),
-            user_data:    unescape(dbus_snapshot[7]),
-            config:       config
+            type:        SNAPSHOT_ID[dbus_snapshot[1]],
+            number:      dbus_snapshot[0],
+            pre_number:  dbus_snapshot[2].to_i,
+            timestamp:   Time.at(dbus_snapshot[3]),
+            uid:         dbus_snapshot[4],
+            description: unescape(dbus_snapshot[5]),
+            cleanup:     unescape(dbus_snapshot[6]),
+            user_data:   unescape(dbus_snapshot[7]),
+            config:      config
           }
         end
       end
@@ -170,8 +170,8 @@ module Yast
         return @dbus_object if @dbus_object
         @dbus_object =
           DBus::SystemBus.instance
-                         .service("org.opensuse.Snapper")
-                         .object("/org/opensuse/Snapper")
+            .service("org.opensuse.Snapper")
+            .object("/org/opensuse/Snapper")
         @dbus_object.default_iface = "org.opensuse.Snapper"
         @dbus_object.introspect
         @dbus_object
