@@ -63,7 +63,7 @@ describe Yast::Snapper do
       let(:configs) { ["snap_opt", "snap_var"] }
 
       before do
-        allow(Yast::SnapperDbus).to receive(:list_snapshots).with("snap_var")
+        allow(Yast::Snapshot).to receive(:list_snapshots).with("snap_var")
       end
 
       it "returns the first config read" do

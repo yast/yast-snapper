@@ -99,7 +99,6 @@ describe Yast::SnapperClass::Tree do
       it "splits name to components and add node under last component" do
         root = subject
         root.add("a", 0)
-        ch1 = root.children.first
         root.add("/a/b", 0)
 
         expect(root.children.first.children.first.name).to eq "b"
@@ -108,7 +107,6 @@ describe Yast::SnapperClass::Tree do
       it "change status if any node full name equal passed name" do
         root = subject
         root.add("a", 0)
-        ch1 = root.children.first
         root.add("/a/b", 0)
         root.add("/a/b", 1)
 

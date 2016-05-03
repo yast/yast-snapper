@@ -4,7 +4,9 @@
 ENV["Y2DIR"] = File.expand_path("../../src", __FILE__)
 
 require "yast"
+require "snapper/snapshot"
 
+# Dummy class for testing.
 class DummyClass < Yast::Client
   def initialize
     Yast.include self, "snapper/dialogs.rb"
@@ -15,26 +17,31 @@ describe "Yast::SnapperDialogsInclude" do
   subject { DummyClass.new }
 
   describe "#snapshot_modified" do
-    let(:orig) { {:num => 1, :post_num => 2} }
-   
+    let(:orig) { Yast::SingleSnapshot.new(number: 1, description: "test snapshot") }
+
     it "returns false if we have only deleted elements" do
-       expect(subject.snapshot_modified(orig, {:num => 1})).to eq false
+      data = { number: 1 }
+      expect(subject.snapshot_modified(orig, data)).to eq false
     end
-   
+
     it "returns false if the new hash is empty" do
-      expect(subject.snapshot_modified(orig, {})).to eq false
+      data = {}
+      expect(subject.snapshot_modified(orig, data)).to eq false
     end
-       
-     it "returns false if the hashes are equal" do
-       expect(subject.snapshot_modified(orig, orig)).to eq false
-     end
-   
+
+    it "returns false if the hashes are equal" do
+      data = { number: 1, description: "test snapshot" }
+      expect(subject.snapshot_modified(orig, data)).to eq false
+    end
+
     it "returns true if some value has changed" do
-      expect(subject.snapshot_modified(orig, {:num => 4, :post_num => 2})).to eq true
-     end
-   
+      data = { number: 4, pre_number: 2 }
+      expect(subject.snapshot_modified(orig, data)).to eq true
+    end
+
     it "returns true if new keys has been added" do
-       expect(subject.snapshot_modified(orig, {:num => 1 , :description => "desc"})).to eq true
+      data = { number: 1, description: "desc" }
+      expect(subject.snapshot_modified(orig, data)).to eq true
     end
   end
 

@@ -1,143 +1,178 @@
-require_relative 'spec_helper'
-require 'yast'
-require 'dbus'
-require_relative '../src/lib/snapper/snapshot.rb'
+require_relative "spec_helper"
 
-describe Yast2::Snapper::Snapshot, "with default strategy" do
-  let(:strategy) { Yast2::Snapper::Snapshot.default_strategy }
+require "dbus"
+
+require "snapper/snapshot"
+
+describe Yast::Snapshot do
+  let(:communication) { Yast::SnapshotDBus.new }
+  let(:subject) { Yast::Snapshot }
   let(:output_path) { load_yaml_fixture("snapper-list.yml") }
-    
+
   before do
-    allow(strategy).to receive(:list_configs).and_return(["opt","var"])
-    allow(strategy).to receive(:list_snapshots).with("var").and_return(output_path["var"])
-    allow(strategy).to receive(:list_snapshots).with("opt").and_return(output_path["opt"])
+    allow(subject).to receive(:default_communication) { communication }
+    allow(communication).to receive(:list_configs).and_return(["opt", "var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("var").and_return(output_path["var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("opt").and_return(output_path["opt"])
   end
-  
+
   describe ".all" do
 
     let(:current) { 1 }
-     
-    it "returns a list with all the snapshots if not config given" do
-      total = output_path["var"].size + output_path["opt"].size - (2 * current)
-      expect(Yast2::Snapper::Snapshot.all.size).to eq (total)
+
+    context "without arguments" do
+      it "returns a list of existing snapshots" do
+        total = output_path["var"].size + output_path["opt"].size - (2 * current)
+        expect(subject.all.size).to eql(total)
+      end
     end
 
-    it "returns a list with the snapshots for a specific config" do
-      var_size = output_path["var"].size - current
-      opt_size = output_path["opt"].size - current
-      expect(Yast2::Snapper::Snapshot.all("var").size).to eq var_size
-      expect(Yast2::Snapper::Snapshot.all("opt").size).to eq opt_size
-    end
+    context "given a config as argument" do
+      it "returns a list with the snapshots for given config" do
+        var_size = output_path["var"].size - current
+        opt_size = output_path["opt"].size - current
+        expect(subject.all("var").size).to eq var_size
+        expect(subject.all("opt").size).to eq opt_size
+      end
 
-    it "raises an error if the config not exist" do
-      allow(strategy).to receive(:list_snapshots).with("not_exist").and_raise DBus::Error.new("config not found")
+      it "raises an error if the config not exist" do
+        allow(communication).to receive(:list_snapshots)
+          .with("not_exist").and_raise DBus::Error.new("config not found")
 
-      expect { Yast2::Snapper::Snapshot.all("not_exist") }.to raise_error(DBus::Error)
+        expect { subject.all("not_exist") }.to raise_error(DBus::Error)
+      end
     end
 
   end
 
   describe ".find" do
 
-    context "without passing config paramater" do 
+    context "without passing config paramater" do
 
       it "returns an exception when num does not exist" do
-        expect(Yast2::Snapper::Snapshot.find(100)).to be_nil
+        expect(subject.find(100)).to be_nil
       end
 
       it "returns a snapshot object when num exist" do
-        expect(Yast2::Snapper::Snapshot.find(5).class).to eq (Yast2::Snapper::Snapshot)
+        expect(subject.find(5).class)
+          .to eq(Yast::PostSnapshot)
       end
 
       it "returns the correct snapshot" do
-        expect(Yast2::Snapper::Snapshot.find(5).number).to eq 5
+        expect(subject.find(5).number).to eq 5
       end
 
       it "can't found the current snapshot" do
-        expect(Yast2::Snapper::Snapshot.find(0)).to be_nil
+        expect(subject.find(0)).to be_nil
       end
     end
 
     context "finding in a config given" do
 
       it "returns an exception when num is not present" do
-        expect(Yast2::Snapper::Snapshot.find(1, "opt")).to be_nil
+        expect(subject.find(1, "opt")).to be_nil
       end
 
       it "returns a snapshot object when num exist" do
-        expect(Yast2::Snapper::Snapshot.find(5, "var").class).to eq (Yast2::Snapper::Snapshot)
+        expect(subject.find(5, "var").class)
+          .to eq(Yast::PostSnapshot)
       end
-      
+
       it "returns the correct snapshot" do
-        expect(Yast2::Snapper::Snapshot.find(5, "var").number).to eq 5
+        expect(subject.find(5, "var").number).to eq 5
       end
 
     end
   end
 
-  describe "#pre" do
+  describe ".new_by_type" do
+    context "when given attributes contains type equals 'single'" do
+      let(:attrs) { { type: "single" } }
 
-    it "returns the previous snapshot object" do
-      expect(Yast2::Snapper::Snapshot.find(7).pre.class).to eq(Yast2::Snapper::Snapshot)
+      it "returns a SingleSnapshot" do
+        expect(subject.new_by_type(attrs).class).to eq(Yast::SingleSnapshot)
+      end
     end
+    context "when given attributes contains type equals 'pre'" do
+      let(:attrs) { { type: "pre" } }
 
-    it "returns the correct snapshot" do
-      expect(Yast2::Snapper::Snapshot.find(7).pre.number).to eq(4)
+      it "returns a PreSnapshot" do
+        expect(subject.new_by_type(attrs).class).to eq(Yast::PreSnapshot)
+      end
     end
+    context "when given attributes contains type equals 'post'" do
+      let(:attrs) { { type: "post" } }
 
-    it "returns nil when hasn't got pre" do
-      expect(Yast2::Snapper::Snapshot.find(4).pre).to be_nil
+      it "returns a PostSnapshot" do
+        expect(subject.new_by_type(attrs).class).to eq(Yast::PostSnapshot)
+      end
     end
-
   end
 
-  describe "#pre?" do
-    let(:presnapshot) { double(Yast2::Snapper::Snapshot) }
-    
-    it "returns true for snapshots with type :pre or :PRE" do
-      expect(Yast2::Snapper::Snapshot.find(4).pre?).to eq true
+  describe ".list_configs" do
+    before do
+      allow(communication).to receive(:list_configs) { ["opt", "var"] }
     end
+    it "returns an array with current snapper configs" do
+      expect(subject.list_configs).to eql ["opt", "var"]
+    end
+  end
+end
 
-    it "returns false for not pre snapshots" do
-      expect(Yast2::Snapper::Snapshot.find(7).pre?).to eq false 
-    end
+describe Yast::PreSnapshot do
+  let(:communication) { Yast::SnapshotDBus.new }
+  let(:output_path) { load_yaml_fixture("snapper-list.yml") }
 
-    it "returns nil when hasn't got pre" do
-      expect(Yast2::Snapper::Snapshot.find(4).pre).to be_nil
-    end
+  before do
+    allow(Yast::Snapshot).to receive(:default_communication) { communication }
+    allow(communication).to receive(:list_configs).and_return(["opt", "var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("var").and_return(output_path["var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("opt").and_return(output_path["opt"])
   end
 
   describe "#post" do
-
+    let(:subject) { Yast::Snapshot.find(4) }
 
     it "returns the post snapshot object" do
-      expect(Yast2::Snapper::Snapshot.find(4).post.class).to eq(Yast2::Snapper::Snapshot)
+      expect(subject.class).to eql(Yast::PreSnapshot)
+      expect(subject.post.class).to eq(Yast::PostSnapshot)
     end
 
     it "returns the correct snapshot" do
-      expect(Yast2::Snapper::Snapshot.find(4).post.number).to eq(7)
+      expect(subject.post.number).to eq(7)
     end
 
     it "returns nil when hasn't got post" do
-      expect(Yast2::Snapper::Snapshot.find(2).post).to be_nil
+      expect(Yast::Snapshot.find(2).post).to be_nil
     end
   end
+end
 
-  describe "#post?" do
-    let(:presnapshot) { double(Yast2::Snapper::Snapshot) }
-    
-    it "returns true for snapshots with type :pre or :PRE" do
-      expect(Yast2::Snapper::Snapshot.find(7).post?).to eq true
-    end
+describe Yast::PostSnapshot do
+  let(:subject) { Yast::PostSnapshot }
+  let(:communication) { Yast::SnapshotDBus.new }
+  let(:output_path) { load_yaml_fixture("snapper-list.yml") }
 
-    it "returns false for not pre snapshots" do
-      expect(Yast2::Snapper::Snapshot.find(4).post?).to eq false 
-    end
-
-    it "returns nil when hasn't got post" do
-      expect(Yast2::Snapper::Snapshot.find(2).post).to be_nil
-    end
+  before do
+    allow(Yast::Snapshot).to receive(:default_communication) { communication }
+    allow(communication).to receive(:list_configs).and_return(["opt", "var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("var").and_return(output_path["var"])
+    allow(communication).to receive(:list_snapshots)
+      .with("opt").and_return(output_path["opt"])
   end
 
+  describe "#pre" do
+    let(:subject) { Yast::Snapshot.find(7) }
+    it "returns the previous snapshot object" do
+      expect(subject.class).to eql(Yast::PostSnapshot)
+      expect(subject.pre.class).to eq(Yast::PreSnapshot)
+      expect(subject.pre.number).to eq(4)
+    end
 
+  end
 end
