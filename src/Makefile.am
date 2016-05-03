@@ -1,8 +1,7 @@
 # Sources for snapper
 
 module_DATA = \
-  modules/Snapper.rb \
-  modules/SnapperDbus.rb
+  modules/Snapper.rb
 
 client_DATA = \
   clients/snapper.rb
@@ -12,6 +11,12 @@ ynclude_DATA = \
   include/snapper/wizards.rb \
   include/snapper/dialogs.rb \
   include/snapper/helps.rb
+
+ylibdir = @ylibdir@/snapper
+ylib_DATA = \
+  lib/snapper/snapshot.rb \
+  lib/snapper/snapshot_dbus.rb
+
 
 desktop_DATA = \
   desktop/snapper.desktop

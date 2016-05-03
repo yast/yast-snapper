@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        3.1.10
+Version:        3.1.11
 Release:        0
 Group:		System/YaST
 
@@ -59,7 +59,9 @@ YaST module for accessing and managing file-system snapshots
 %files
 %defattr(-,root,root)
 %dir %{yast_yncludedir}/snapper
+%dir %{yast_libdir}/snapper
 %{yast_yncludedir}/snapper/*
+%{yast_libdir}/snapper
 %{yast_clientdir}/snapper.rb
 %{yast_moduledir}/Snapper.rb
 %{yast_moduledir}/SnapperDbus.rb
