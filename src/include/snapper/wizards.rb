@@ -25,9 +25,7 @@
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
 
 module Yast
-
   module SnapperWizardsInclude
-
     def initialize_snapper_wizards(include_target)
       Yast.import "UI"
 
@@ -42,14 +40,14 @@ module Yast
     # Main workflow of the snapper configuration
     # @return sequence result
     def MainSequence
-      aliases = { "summary" => lambda { SummaryDialog() }, "show" => lambda do
+      aliases = { "summary" => -> { SummaryDialog() }, "show" => lambda do
         ShowDialog()
       end }
 
       sequence = {
         "ws_start" => "summary",
-        "summary"  => { :abort => :abort, :next => :next, :show => "show" },
-        "show"     => { :abort => :abort, :next => "summary" }
+        "summary"  => { abort: :abort, next: :next, show: "show" },
+        "show"     => { abort: :abort, next: "summary" }
       }
 
       ret = Sequencer.Run(aliases, sequence)
@@ -60,14 +58,14 @@ module Yast
     # Whole configuration of snapper
     # @return sequence result
     def SnapperSequence
-      aliases = { "read" => [lambda { ReadDialog() }, true], "main" => lambda do
+      aliases = { "read" => [-> { ReadDialog() }, true], "main" => lambda do
         MainSequence()
       end }
 
       sequence = {
         "ws_start" => "read",
-        "read"     => { :abort => :abort, :next => "main" },
-        "main"     => { :abort => :abort, :next => :next }
+        "read"     => { abort: :abort, next: "main" },
+        "main"     => { abort: :abort, next: :next }
       }
 
       Wizard.CreateDialog
@@ -77,7 +75,5 @@ module Yast
       UI.CloseDialog
       deep_copy(ret)
     end
-
   end
-
 end

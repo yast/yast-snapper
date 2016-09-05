@@ -7,7 +7,6 @@ require "yast"
 Yast.import "Snapper"
 
 describe Yast::SnapperClass::Tree do
-
   subject { Yast::SnapperClass::Tree.new("", nil) }
 
   describe "#each" do
@@ -100,7 +99,6 @@ describe Yast::SnapperClass::Tree do
       it "splits name to components and add node under last component" do
         root = subject
         root.add("a", 0)
-        ch1 = root.children.first
         root.add("/a/b", 0)
 
         expect(root.children.first.children.first.name).to eq "b"
@@ -109,7 +107,6 @@ describe Yast::SnapperClass::Tree do
       it "change status if any node full name equal passed name" do
         root = subject
         root.add("a", 0)
-        ch1 = root.children.first
         root.add("/a/b", 0)
         root.add("/a/b", 1)
 
@@ -119,7 +116,7 @@ describe Yast::SnapperClass::Tree do
   end
 
   describe "#find" do
-    it "return node matching full name" do
+    it "returns node matching full name" do
       root = subject
       root.add("a", 0)
       ch1 = root.children.first

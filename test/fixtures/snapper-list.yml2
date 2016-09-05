@@ -1,0 +1,45 @@
+0:
+  num: 0
+  type: single
+  pre_num: nil
+  date:
+  uid: root
+  description: current
+  cleanup: number
+  userdata:
+1:
+  num: 1
+  type: pre
+  pre_num: nil
+  date: Wed 13 May 2015 04:14:14 PM WEST
+  uid: root
+  description: zypp(y2base)
+  cleanup: number
+  userdata: important=no
+3:
+  num: 3
+  type: single
+  pre_num: nil
+  date: Wed 13 May 2015 05:01:47 PM WEST
+  uid: root
+  description: zypp(zypper)
+  cleanup: number
+  userdata: important=no
+4:
+  num: 4
+  type: post
+  pre_num: 3
+  date: Wed 13 May 2015 05:03:11 PM WEST
+  uid: root
+  description: zypp(zypper)
+  cleanup: number
+  userdata: important=no
+5:
+  num: 5
+  type: single
+  pre_num: 
+  date: Wed 13 May 2015 05:11:25 PM WEST
+  uid: root
+  description:
+  cleanup: number
+  userdata: important=no

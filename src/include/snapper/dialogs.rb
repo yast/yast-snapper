@@ -25,11 +25,8 @@
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
 
 module Yast
-
   module SnapperDialogsInclude
-
     include Yast::Logger
-
 
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
@@ -47,198 +44,409 @@ module Yast
       Yast.include include_target, "snapper/helps.rb"
     end
 
-
-    def timestring(t)
-      return t.strftime("%F %T")
-    end
-
-
-    def ReallyAbort
-      Popup.ReallyAbort(true)
-    end
-
-
-    # Read settings dialog
-    # @return `abort if aborted and `next otherwise
-    def ReadDialog
-      return :abort if !Confirm.MustBeRoot
-
-      Wizard.RestoreHelp(Ops.get_string(@HELPS, "read", ""))
-      ret = Snapper.Init()
-      ret ? :next : :abort
-    end
-
-
     # transform userdata from widget to map
-    def get_userdata(id)
-      return Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value))
+    def userdata(id)
+      Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value).to_s)
     end
-
 
     # generate list of items for Cleanup combo box
     def cleanup_items(current)
-      Builtins.maplist(["timeline", "number", ""]) do |cleanup|
+      ["timeline", "number", ""].map do |cleanup|
         Item(Id(cleanup), cleanup, cleanup == current)
       end
     end
 
-
     # compare editable parts of snapshot maps
-    def snapshot_modified(orig, new)
-      orig = deep_copy(orig)
-      new = deep_copy(new)
-      ret = false
-      Builtins.foreach(
-        Convert.convert(new, :from => "map", :to => "map <string, any>")
-      ) { |key, value| ret = ret || Ops.get(orig, key) != value }
-      ret
+    def snapshot_modified(orig, args)
+      args.any? { |k, v| orig.send(k) != v }
     end
 
-    
     # grouped enable condition based on snapshot presence for modification widgets
-    def enable_snapshot_buttons(condition)
-      UI.ChangeWidget(Id(:show), :Enabled, condition) 
-      UI.ChangeWidget(Id(:modify), :Enabled, condition)
-      UI.ChangeWidget(Id(:delete), :Enabled, condition)
+    def enable_buttons(buttons, condition)
+      buttons.each do |b|
+        UI.ChangeWidget(Id(b), :Enabled, condition)
+      end
     end
-
 
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
     def ModifySnapshotPopup(snapshot)
-      snapshot = deep_copy(snapshot)
       modified = false
-      num = Ops.get_integer(snapshot, "num", 0)
-      pre_num = Ops.get_integer(snapshot, "pre_num", num)
-      type = Ops.get_symbol(snapshot, "type", :none)
 
-      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
-      pre_snapshot = Ops.get(Snapper.snapshots, pre_index, {})
+      open_modify_dialog(modify_content(snapshot))
 
-      snapshot_term = lambda do |prefix, data|
-        data = deep_copy(data)
-        HBox(
-          HSpacing(),
-          Frame(
-            "",
-            HBox(
-              HSpacing(0.4),
-              VBox(
-                # text entry label
-                InputField(
-                  Id(Ops.add(prefix, "description")),
-                  Opt(:hstretch),
-                  _("Description"),
-                  Ops.get_string(data, "description", "")
-                ),
-                # text entry label
-                InputField(
-                  Id(Ops.add(prefix, "userdata")),
-                  Opt(:hstretch),
-                  _("User data"),
-                  Snapper.userdata_to_string(data["userdata"])
-                ),
-                Left(
-                  ComboBox(
-                    Id(Ops.add(prefix, "cleanup")),
-                    Opt(:editable, :hstretch),
-                    # combo box label
-                    _("Cleanup algorithm"),
-                    cleanup_items(Ops.get_string(data, "cleanup", ""))
-                  )
-                )
-              ),
-              HSpacing(0.4)
-            )
-          ),
-          HSpacing()
-        )
-      end
-
-      if type != :POST
-        cont = VBox(
-          # popup label, %{num} is number
-          Label(_("Modify Snapshot %{num}") % { :num => num }),
-          snapshot_term.call("", snapshot)
-        )
-      else
-        cont = VBox(
-          # popup label, %{pre} and %{post} are numbers
-          Label(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
-          # label
-          Left(Label(_("Pre (%{pre})") % { :pre => pre_num })),
-          snapshot_term.call("pre_", pre_snapshot),
-          VSpacing(),
-          # label
-          Left(Label(_("Post (%{post})") % { :post => num })),
-          snapshot_term.call("", snapshot)
-        )
-      end
-
-      UI.OpenDialog(
-        Opt(:decorated),
-        HBox(
-          HSpacing(1),
-          VBox(
-            VSpacing(0.5),
-            HSpacing(65),
-            cont,
-            VSpacing(0.5),
-            ButtonBox(
-              PushButton(Id(:ok), Label.OKButton),
-              PushButton(Id(:cancel), Label.CancelButton)
-            ),
-            VSpacing(0.5)
-          ),
-          HSpacing(1)
-        )
-      )
-
-      ret = nil
       args = {}
       pre_args = {}
+      ret = nil
 
-      while true
+      loop do
         ret = UI.UserInput
-        args = {
-          "num"         => num,
-          "description" => UI.QueryWidget(Id("description"), :Value),
-          "cleanup"     => UI.QueryWidget(Id("cleanup"), :Value),
-          "userdata"    => get_userdata("userdata")
-        }
-        if type == :POST
-          pre_args = {
-            "num"         => pre_num,
-            "description" => UI.QueryWidget(Id("pre_description"), :Value),
-            "cleanup"     => UI.QueryWidget(Id("pre_cleanup"), :Value),
-            "userdata"    => get_userdata("pre_userdata")
-          }
-        end
+        args = get_modify_args(snapshot)
+        pre_args = get_modify_args(snapshot.pre) if snapshot.post?
         break if ret == :ok || ret == :cancel
       end
+
       UI.CloseDialog
       if ret == :ok
-        if snapshot_modified(snapshot, args)
-          modified = Snapper.ModifySnapshot(args)
-        end
-        if type == :POST && snapshot_modified(pre_snapshot, pre_args)
-          modified = Snapper.ModifySnapshot(pre_args) || modified
+        modified = snapshot.update(args) if snapshot_modified(snapshot, args)
+
+        if snapshot.post? && snapshot_modified(snapshot.pre, pre_args)
+          modified = snapshot.pre.update(pre_args)
         end
       end
 
       modified
     end
 
-
     # Popup for creating new snapshot
     # @return true if new snapshot was created
     def CreateSnapshotPopup(pre_snapshots)
-      pre_snapshots = deep_copy(pre_snapshots)
       created = false
-      pre_items = Builtins.maplist(pre_snapshots) do |s|
-        Item(Id(s), Builtins.tostring(s))
+      pre_items = pre_snapshots.map do |s|
+        Item(Id(s), s.to_s)
       end
 
+      open_create_dialog(pre_items)
+
+      enable_buttons([:post, :pre_list], !pre_items.empty?)
+
+      ret = nil
+      args = {}
+
+      loop do
+        ret = UI.UserInput
+        args = {
+          type:        UI.QueryWidget(Id(:rb_type), :Value),
+          description: UI.QueryWidget(Id("description"), :Value),
+          pre_number:  UI.QueryWidget(Id(:pre_list), :Value),
+          cleanup:     UI.QueryWidget(Id("cleanup"), :Value),
+          user_data:   userdata("userdata")
+        }
+        break if ret == :ok || ret == :cancel
+      end
+
+      UI.CloseDialog
+      created = Snapper.CreateSnapshot(args) if ret == :ok
+      created
+    end
+
+    # Popup for deleting existing snapshot
+    # @return true if snapshot was deleted
+    def DeleteSnapshotPopup(snapshots)
+      snaps = []
+      post_snaps = []
+      snapshots.each do |s|
+        if !s.post?
+          snaps << s.number
+        else
+          post_snaps << { pre_num: s.pre.number, num: s.number }
+        end
+      end
+
+      nums = snaps + post_snaps.map { |k| "#{k[:pre_num]}&#{k[:num]}" }
+
+      # yes/no popup question
+      return false if !Popup.YesNo(_("You have selected those snapshots: %{num}") % { num: nums.join(",") })
+
+      Snapper.DeleteSnapshot(snaps)
+      post_snaps.each do |k|
+        Snapper.DeleteSnapshot([k[:pre_num], k[:num]])
+      end
+      true
+    end
+
+    # Summary dialog
+    # @return dialog result
+    def SummaryDialog
+      # summary dialog caption
+      caption = _("Snapshots")
+
+      # update list of snapshots
+      Wizard.SetContentsButtons(
+        caption,
+        snapshots_table,
+        Ops.get_string(@HELPS, "summary", ""),
+        Label.BackButton,
+        Label.CloseButton
+      )
+      Wizard.HideBackButton
+      Wizard.HideAbortButton
+
+      UI.SetFocus(Id(:snapshots_table))
+
+      refresh_buttons
+      summary_event_loop
+    end
+
+    def format_diff(diff, textmode)
+      lines = String.EscapeTags(diff).split("\n")
+      return lines.join("<br>") if textmode
+      # colorize diff output
+      lines.map! do |line|
+        case line[0]
+        when "+"
+          line = "<font color=blue>#{line}</font>"
+        when "-"
+          line = "<font color=red>#{line}</font>"
+        end
+        line
+      end
+
+      # show fixed font in diff
+      "<pre>#{lines.join("<br>")}</pre>"
+    end
+
+    def textmode?
+      display_info = UI.GetDisplayInfo
+      display_info["TextMode"] || false
+    end
+
+    # @return dialog result
+    def ShowDialog
+      # dialog caption
+      caption = _("Selected Snapshot Overview")
+
+      current_file = nil
+
+      snapshot = Snapper.selected_snapshot
+
+      from = snapshot
+      to = snapshot.pre? ? snapshot.post : nil
+      if snapshot.post?
+        from = snapshot.pre
+        to = snapshot
+      end
+
+      # busy popup message
+      Popup.ShowFeedback("", _("Calculating changed files..."))
+      files_tree = Snapper.ReadModifiedFilesTree(from, to)
+      Popup.ClearFeedback()
+
+      if snapshot.single?
+        tree_label = snapshot.number.to_s
+        date_widget = date_widget_single(snapshot)
+      else
+        tree_label = "#{from.number} && #{to.number}"
+        date_widget = date_widget_post(snapshot)
+      end
+
+      contents = show_content(tree_label, date_widget, from.description)
+      help_to_show = snapshot.single? ? "show_single" : "show_pair"
+
+      # show the dialog contents with empty tree, compute items later
+      Wizard.SetContentsButtons(
+        caption,
+        contents,
+        @HELPS[help_to_show].to_s,
+        # button label
+        Label.CancelButton,
+        _("Restore Selected")
+      )
+
+      tree_items = generate_ui_file_tree(files_tree)
+
+      replace_tree_items(tree_label, tree_items) if !tree_items.empty?
+
+      set_entry_term(snapshot, current_file)
+
+      UI.SetFocus(Id(:tree)) if textmode?
+
+      show_event_loop(snapshot, from, to, files_tree)
+    end
+
+  private
+
+    def modify_content(snapshot)
+      snapshot.post? ? modify_post_content(snapshot) : modify_snapshot_content(snapshot)
+    end
+
+    def modify_post_content(snapshot)
+      VBox(
+        # popup label, %{pre} and %{post} are numbers
+        Label(_("Modify Snapshot %{pre} and %{post}") %
+              { pre: snapshot.pre.number, post: snapshot.number }),
+        # label
+        Left(Label(_("Pre (%{pre})") % { pre: snapshot.pre.number })),
+        snapshot_term("pre_", snapshot.pre),
+        VSpacing(),
+        # label
+        Left(Label(_("Post (%{post})") % { post: snapshot.number })),
+        snapshot_term("", snapshot)
+      )
+    end
+
+    def modify_snapshot_content(snapshot)
+      VBox(
+        # popup label, %{num} is number
+        Label(_("Modify Snapshot %{num}") % { num: snapshot.number }),
+        snapshot_term("", snapshot)
+      )
+    end
+
+    def replace_tree_items(tree_label, tree_items)
+      UI.ReplaceWidget(
+        Id(:reptree),
+        VBox(
+          Left(Label(Snapper.current_subvolume)),
+          Tree(
+            Id(:tree),
+            Opt(:notify, :immediate, :multiSelection, :recursiveSelection),
+            tree_label,
+            tree_items
+          )
+        )
+      )
+
+      # no item is selected
+      UI.ChangeWidget(:tree, :CurrentItem, nil)
+    end
+
+    # create the term for selected file
+    def set_entry_term(snapshot, current_file)
+      if current_file && current_file.status != 0
+        if snapshot.single?
+          show_single_set_term
+          show_file_modification(current_file, snapshot, nil)
+          UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
+        else
+          show_post_set_term
+          show_file_modification(current_file, snapshot.pre, snapshot)
+        end
+      else
+        UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
+        UI.ReplaceWidget(Id(:diff_content), HBox(HStretch()))
+      end
+
+      nil
+    end
+
+    def generate_ui_file_tree(subtree)
+      subtree.children.map do |file|
+        Item(
+          Id(file.fullname),
+          term(:icon, file.icon),
+          file.name, false,
+          generate_ui_file_tree(file)
+        )
+      end
+    end
+
+    def show_post_set_term
+      UI.ReplaceWidget(
+        Id(:diff_chooser),
+        HBox(
+          HSpacing(0.5),
+          VBox(
+            VSpacing(0.2),
+            RadioButtonGroup(
+              Id(:rd),
+              Left(
+                HVSquash(
+                  VBox(
+                    Left(
+                      RadioButton(
+                        Id(:diff_snapshot),
+                        Opt(:notify),
+                        # radio button label
+                        _(
+                          "Show the difference between first and second snapshot"
+                        ),
+                        true
+                      )
+                    ),
+                    Left(
+                      RadioButton(
+                        Id(:diff_pre_current),
+                        Opt(:notify),
+                        # radio button label
+                        _(
+                          "Show the difference between first snapshot and current system"
+                        ),
+                        false
+                      )
+                    ),
+                    Left(
+                      RadioButton(
+                        Id(:diff_post_current),
+                        Opt(:notify),
+                        # radio button label
+                        _(
+                          "Show the difference between second snapshot and current system"
+                        ),
+                        false
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+            VSpacing()
+          ),
+          HSpacing(0.5)
+        )
+      )
+    end
+
+    def show_single_set_term
+      UI.ReplaceWidget(
+        Id(:diff_chooser),
+        HBox(
+          HSpacing(0.5),
+          VBox(
+            VSpacing(0.2),
+            RadioButtonGroup(
+              Id(:rd),
+              Left(
+                HVSquash(
+                  VBox(
+                    Left(
+                      RadioButton(
+                        Id(:diff_snapshot),
+                        Opt(:notify),
+                        # radio button label
+                        _(
+                          "Show the difference between snapshot and current system"
+                        ),
+                        true
+                      )
+                    ),
+                    VBox(
+                      Left(
+                        RadioButton(
+                          Id(:diff_arbitrary),
+                          Opt(:notify),
+                          # radio button label, snapshot selection will follow
+                          _(
+                            "Show the difference between current and selected snapshot:"
+                          ),
+                          false
+                        )
+                      ),
+                      HBox(
+                        HSpacing(2),
+                        # FIXME: without label, there's no shortcut!
+                        Left(
+                          ComboBox(
+                            Id(:selection_snapshots),
+                            Opt(:notify),
+                            "",
+                            combo_items
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+            VSpacing()
+          ),
+          HSpacing(0.5)
+        )
+      )
+    end
+
+    def open_create_dialog(pre_items)
       UI.OpenDialog(
         Opt(:decorated),
         HBox(
@@ -313,668 +521,260 @@ module Yast
           HSpacing(1)
         )
       )
-
-      UI.ChangeWidget(
-        Id("post"),
-        :Enabled,
-	!pre_items.empty?
-      )
-      UI.ChangeWidget(
-        Id(:pre_list),
-        :Enabled,
-	!pre_items.empty?
-      )
-
-      ret = nil
-      args = {}
-      while true
-        ret = UI.UserInput
-        args = {
-          "type"        => UI.QueryWidget(Id(:rb_type), :Value),
-          "description" => UI.QueryWidget(Id("description"), :Value),
-          "pre"         => UI.QueryWidget(Id(:pre_list), :Value),
-          "cleanup"     => UI.QueryWidget(Id("cleanup"), :Value),
-          "userdata"    => get_userdata("userdata")
-        }
-        break if ret == :ok || ret == :cancel
-      end
-      UI.CloseDialog
-      created = Snapper.CreateSnapshot(args) if ret == :ok
-      created
     end
 
-
-    # Popup for deleting existing snapshot
-    # @return true if snapshot was deleted
-    def DeleteSnapshotPopup(snapshot)
-      snapshot = deep_copy(snapshot)
-      num = Ops.get_integer(snapshot, "num", 0)
-      pre_num = Ops.get_integer(snapshot, "pre_num", num)
-      type = Ops.get_symbol(snapshot, "type", :none)
-
-      if type != :POST
-
-        # yes/no popup question
-        if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
-          return Snapper.DeleteSnapshot([ num ])
-        end
-
-      else
-
-        # yes/no popup question
-        if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
-                       { :pre => pre_num, :post => num })
-          return Snapper.DeleteSnapshot([ pre_num, num ])
-        end
-
-      end
-
-      false
+    def date_widget_single(snapshot)
+      HBox(
+        # label, date string will follow at the end of line
+        Label(Id(:date), _("Time of taking the snapshot:")),
+        Right(Label(snapshot.date))
+      )
     end
 
-
-    # Summary dialog
-    # @return dialog result
-    def SummaryDialog
-      # summary dialog caption
-      caption = _("Snapshots")
-
-      snapshots = deep_copy(Snapper.snapshots)
-      configs = deep_copy(Snapper.configs)
-
-      snapshot_items = []
-      # lonely pre snapshots
-      pre_snapshots = []
-
-      # generate list of snapshot table items
-      get_snapshot_items = lambda do
-        i = -1
-        snapshot_items = []
-        pre_snapshots = []
-
-        Builtins.foreach(snapshots) do |s|
-          i = Ops.add(i, 1)
-          num = Ops.get_integer(s, "num", 0)
-          date = ""
-          if num != 0
-            date = timestring(s["date"])
-          end
-          userdata = Snapper.userdata_to_string(s["userdata"])
-          if Ops.get_symbol(s, "type", :none) == :SINGLE
-            snapshot_items = Builtins.add(
-              snapshot_items,
-              Item(
-                Id(i),
-                num,
-                _("Single"),
-                date,
-                "",
-                Ops.get_string(s, "description", ""),
-                userdata
-              )
-            )
-          elsif Ops.get_symbol(s, "type", :none) == :POST
-            pre = Ops.get_integer(s, "pre_num", 0) # pre canot be 0
-            index = Ops.get(Snapper.id2index, pre, -1)
-            if pre == 0 || index == -1
-              Builtins.y2warning(
-                "something wrong - pre:%1, index:%2",
-                pre,
-                index
-              )
-              next
-            end
-            desc = Ops.get_string(Snapper.snapshots, [index, "description"], "")
-            pre_date = timestring(Snapper.snapshots[index]["date"])
-            snapshot_items = Builtins.add(
-              snapshot_items,
-              Item(
-                Id(i),
-                "%{pre} & %{post}" % { :pre => pre, :post => num },
-                _("Pre & Post"),
-                pre_date,
-                date,
-                desc,
-                userdata
-              )
-            )
-          else
-            post = Ops.get_integer(s, "post_num", 0) # 0 means there's no post
-            if post == 0
-              Builtins.y2milestone("pre snappshot %1 does not have post", num)
-              snapshot_items = Builtins.add(
-                snapshot_items,
-                Item(
-                  Id(i),
-                  num,
-                  _("Pre"),
-                  date,
-                  "",
-                  Ops.get_string(s, "description", ""),
-                  userdata
-                )
-              )
-              pre_snapshots = Builtins.add(pre_snapshots, num)
-            else
-              Builtins.y2milestone("skipping pre snapshot: %1", num)
-            end
-          end
-        end
-        deep_copy(snapshot_items)
-      end
-
-      # update list of snapshots
-      update_snapshots = lambda do
-        # busy popup message
-        Popup.ShowFeedback("", _("Reading list of snapshots..."))
-
-        Snapper.ReadSnapshots()
-        snapshots = deep_copy(Snapper.snapshots)
-        Popup.ClearFeedback
-
-        UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items.call)
-	enable_snapshot_buttons(!snapshot_items.empty?)
-
-        nil
-      end
-
-
-      contents = VBox(
+    def date_widget_post(snapshot)
+      VBox(
         HBox(
-          # combo box label
-          Label(_("Current Configuration")),
-          ComboBox(Id(:configs), Opt(:notify), "", Builtins.maplist(configs) do |config|
-            Item(Id(config), config, config == Snapper.current_config)
-          end),
-          HStretch()
-        ),
-        Table(
-          Id(:snapshots_table),
-          Opt(:notify, :keepSorting),
-          Header(
-            # table header
-            _("ID"),
-            _("Type"),
-            _("Start Date"),
-            _("End Date"),
-            _("Description"),
-            _("User Data")
-          ),
-          get_snapshot_items.call
-        ),
-        HBox(
-          # button label
-          PushButton(Id(:show), Opt(:default), _("Show Changes")),
-          PushButton(Id(:create), Label.CreateButton),
-          # button label
-          PushButton(Id(:modify), _("Modify")),
-          PushButton(Id(:delete), Label.DeleteButton),
-          HStretch()
-        )
-      )
-
-      Wizard.SetContentsButtons(
-        caption,
-        contents,
-        Ops.get_string(@HELPS, "summary", ""),
-        Label.BackButton,
-        Label.CloseButton
-      )
-      Wizard.HideBackButton
-      Wizard.HideAbortButton
-
-      UI.SetFocus(Id(:snapshots_table))
-      enable_snapshot_buttons(!snapshot_items.empty?)
-      UI.ChangeWidget(
-        Id(:configs),
-        :Enabled,
-	configs.size > 1
-      )
-
-      ret = nil
-      while true
-        ret = UI.UserInput
-
-        selected = Convert.to_integer(
-          UI.QueryWidget(Id(:snapshots_table), :CurrentItem)
-        )
-
-        if ret == :abort || ret == :cancel || ret == :back
-          if ReallyAbort()
-            break
-          else
-            next
-          end
-
-        elsif ret == :show
-          if Ops.get(snapshots, [selected, "type"]) == :PRE
-            # popup message
-            Popup.Message(
-              _(
-                "This 'Pre' snapshot is not paired with any 'Post' one yet.\nShowing differences is not possible."
-              )
-            )
-            next
-          end
-          # `POST snapshot is selected from the pair
-          Snapper.selected_snapshot = Ops.get(snapshots, selected, {})
-          break
-
-        elsif ret == :configs
-          config = Convert.to_string(UI.QueryWidget(Id(ret), :Value))
-          if config != Snapper.current_config
-            Snapper.current_config = config
-            update_snapshots.call
-            next
-          end
-
-        elsif ret == :create
-          if CreateSnapshotPopup(pre_snapshots)
-            update_snapshots.call
-            next
-          end
-
-        elsif ret == :modify
-          if ModifySnapshotPopup(Ops.get(snapshots, selected, {}))
-            update_snapshots.call
-            next
-          end
-
-        elsif ret == :delete
-          if DeleteSnapshotPopup(Ops.get(snapshots, selected, {}))
-            update_snapshots.call
-            next
-          end
-
-        elsif ret == :next
-          break
-
-        else
-          Builtins.y2error("unexpected retcode: %1", ret)
-          next
-        end
-
-      end
-
-      deep_copy(ret)
-    end
-
-
-    def generate_ui_file_tree(subtree)
-      return subtree.children.map do |file|
-        Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
-             generate_ui_file_tree(file))
-      end
-    end
-
-
-    def format_diff(diff, textmode)
-      lines = Builtins.splitstring(String.EscapeTags(diff), "\n")
-      if !textmode
-        # colorize diff output
-        lines.map! do |line|
-          case line[0]
-          when "+"
-            line = "<font color=blue>#{line}</font>"
-          when "-"
-            line = "<font color=red>#{line}</font>"
-          end
-          line
-        end
-      end
-      ret = lines.join("<br>")
-      if !textmode
-        # show fixed font in diff
-        ret = "<pre>" + ret + "</pre>"
-      end
-      return ret
-    end
-
-
-    # @return dialog result
-    def ShowDialog
-
-      # dialog caption
-      caption = _("Selected Snapshot Overview")
-
-      display_info = UI.GetDisplayInfo
-      textmode = Ops.get_boolean(display_info, "TextMode", false)
-
-      previous_filename = ""
-      current_filename = ""
-      current_file = nil
-
-      snapshot = deep_copy(Snapper.selected_snapshot)
-      snapshot_num = Ops.get_integer(snapshot, "num", 0)
-
-      pre_num = Ops.get_integer(snapshot, "pre_num", snapshot_num)
-      pre_index = Ops.get(Snapper.id2index, pre_num, 0)
-      description = Ops.get_string(
-        Snapper.snapshots,
-        [pre_index, "description"],
-        ""
-      )
-      pre_date = timestring(Snapper.snapshots[pre_index]["date"])
-      date = timestring(snapshot["date"])
-      type = Ops.get_symbol(snapshot, "type", :NONE)
-      combo_items = []
-      Builtins.foreach(Snapper.snapshots) do |s|
-        id = Ops.get_integer(s, "num", 0)
-        if id != snapshot_num
-          # '%1: %2' means 'ID: description', adapt the order if necessary
-          combo_items = Builtins.add(
-            combo_items,
-            Item(
-              Id(id),
-              Builtins.sformat(
-                _("%1: %2"),
-                id,
-                Ops.get_string(s, "description", "")
-              )
-            )
-          )
-        end
-      end
-
-      from = snapshot_num
-      to = 0 # current system
-      if Ops.get_symbol(snapshot, "type", :NONE) == :POST
-        from = Ops.get_integer(snapshot, "pre_num", 0)
-        to = snapshot_num
-      elsif Ops.get_symbol(snapshot, "type", :NONE) == :PRE
-        to = Ops.get_integer(snapshot, "post_num", 0)
-      end
-
-      # busy popup message
-      Popup.ShowFeedback("", _("Calculating changed files..."))
-      files_tree = Snapper.ReadModifiedFilesTree(from, to)
-      Popup.ClearFeedback()
-
-      snapshot_name = Builtins.tostring(snapshot_num)
-
-      # helper function: show the specific modification between snapshots
-      show_file_modification = lambda do |file, from2, to2|
-        content = VBox()
-        # busy popup message
-        Popup.ShowFeedback("", _("Calculating file modifications..."))
-        modification = Snapper.GetFileModification(file.fullname, from2, to2)
-        Popup.ClearFeedback
-        status = Ops.get_list(modification, "status", [])
-        if Builtins.contains(status, "created")
-          # label
-          content = Builtins.add(
-            content,
-            Left(Label(_("New file was created.")))
-          )
-        elsif Builtins.contains(status, "removed")
-          # label
-          content = Builtins.add(content, Left(Label(_("File was removed."))))
-        elsif Builtins.contains(status, "no_change")
-          # label
-          content = Builtins.add(
-            content,
-            Left(Label(_("File content was not changed.")))
-          )
-        elsif Builtins.contains(status, "none")
-          # label
-          content = Builtins.add(
-            content,
-            Left(Label(_("File does not exist in either snapshot.")))
-          )
-        elsif Builtins.contains(status, "diff")
-          # label
-          content = Builtins.add(
-            content,
-            Left(Label(_("File content was modified.")))
-          )
-        end
-        if Builtins.contains(status, "mode")
-          content = Builtins.add(
-            content,
-            Left(
-              Label(
-                # text label, %1, %2 are file modes (like '-rw-r--r--')
-                Builtins.sformat(
-                  _("File mode was changed from '%1' to '%2'."),
-                  Ops.get_string(modification, "mode1", ""),
-                  Ops.get_string(modification, "mode2", "")
-                )
-              )
-            )
-          )
-        end
-        if Builtins.contains(status, "user")
-          content = Builtins.add(
-            content,
-            Left(
-              Label(
-                # text label, %1, %2 are user names
-                Builtins.sformat(
-                  _("File user ownership was changed from '%1' to '%2'."),
-                  Ops.get_string(modification, "user1", ""),
-                  Ops.get_string(modification, "user2", "")
-                )
-              )
-            )
-          )
-        end
-        if Builtins.contains(status, "group")
-          # label
-          content = Builtins.add(
-            content,
-            Left(
-              Label(
-                # text label, %1, %2 are group names
-                Builtins.sformat(
-                  _("File group ownership was changed from '%1' to '%2'."),
-                  Ops.get_string(modification, "group1", ""),
-                  Ops.get_string(modification, "group2", "")
-                )
-              )
-            )
-          )
-        end
-
-        if Builtins.haskey(modification, "diff")
-          content = Builtins.add(content, RichText(Id(:diff),
-            format_diff(Ops.get_string(modification, "diff", ""), textmode)))
-        else
-          content = Builtins.add(content, VStretch())
-        end
-
-        # button label
-        restore_label = _("R&estore from First")
-        # button label
-        restore_label_single = _("Restore")
-
-        if file.created?
-          restore_label = Label.RemoveButton
-          restore_label_single = Label.RemoveButton
-        end
-
-        UI.ReplaceWidget(
-          Id(:diff_content),
-          HBox(
-            HSpacing(0.5),
-            VBox(
-              content,
-              VSquash(
-                HBox(
-                  HStretch(),
-                  type == :SINGLE ?
-                    Empty() :
-                    PushButton(Id(:restore_pre), restore_label),
-                  PushButton(
-                    Id(:restore),
-                    type == :SINGLE ?
-                      restore_label_single :
-                      _("Res&tore from Second")
-                  )
-                )
-              )
-            ),
-            HSpacing(0.5)
-          )
-        )
-        if type != :SINGLE && file.deleted?
-          # file removed in 2nd snapshot cannot be restored from that snapshot
-          UI.ChangeWidget(Id(:restore), :Enabled, false)
-        end
-
-        nil
-      end
-
-
-      # create the term for selected file
-      set_entry_term = lambda do
-        if current_file && current_file.status != 0
-          if type == :SINGLE
-            UI.ReplaceWidget(
-              Id(:diff_chooser),
-              HBox(
-                HSpacing(0.5),
-                VBox(
-                  VSpacing(0.2),
-                  RadioButtonGroup(
-                    Id(:rd),
-                    Left(
-                      HVSquash(
-                        VBox(
-                          Left(
-                            RadioButton(
-                              Id(:diff_snapshot),
-                              Opt(:notify),
-                              # radio button label
-                              _(
-                                "Show the difference between snapshot and current system"
-                              ),
-                              true
-                            )
-                          ),
-                          VBox(
-                            Left(
-                              RadioButton(
-                                Id(:diff_arbitrary),
-                                Opt(:notify),
-                                # radio button label, snapshot selection will follow
-                                _(
-                                  "Show the difference between current and selected snapshot:"
-                                ),
-                                false
-                              )
-                            ),
-                            HBox(
-                              HSpacing(2),
-                              # FIXME without label, there's no shortcut!
-                              Left(
-                                ComboBox(
-                                  Id(:selection_snapshots),
-                                  Opt(:notify),
-                                  "",
-                                  combo_items
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  ),
-                  VSpacing()
-                ),
-                HSpacing(0.5)
-              )
-            )
-            show_file_modification.call(current_file, snapshot_num, 0)
-            UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
-          else
-            UI.ReplaceWidget(
-              Id(:diff_chooser),
-              HBox(
-                HSpacing(0.5),
-                VBox(
-                  VSpacing(0.2),
-                  RadioButtonGroup(
-                    Id(:rd),
-                    Left(
-                      HVSquash(
-                        VBox(
-                          Left(
-                            RadioButton(
-                              Id(:diff_snapshot),
-                              Opt(:notify),
-                              # radio button label
-                              _(
-                                "Show the difference between first and second snapshot"
-                              ),
-                              true
-                            )
-                          ),
-                          Left(
-                            RadioButton(
-                              Id(:diff_pre_current),
-                              Opt(:notify),
-                              # radio button label
-                              _(
-                                "Show the difference between first snapshot and current system"
-                              ),
-                              false
-                            )
-                          ),
-                          Left(
-                            RadioButton(
-                              Id(:diff_post_current),
-                              Opt(:notify),
-                              # radio button label
-                              _(
-                                "Show the difference between second snapshot and current system"
-                              ),
-                              false
-                            )
-                          )
-                        )
-                      )
-                    )
-                  ),
-                  VSpacing()
-                ),
-                HSpacing(0.5)
-              )
-            )
-            show_file_modification.call(current_file, pre_num, snapshot_num)
-          end
-        else
-          UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
-          UI.ReplaceWidget(Id(:diff_content), HBox(HStretch()))
-        end
-
-        nil
-      end
-
-      if type == :SINGLE
-        tree_label = "%{num}" % { :num => snapshot_num }
-        date_widget = HBox(
           # label, date string will follow at the end of line
-          Label(Id(:date), _("Time of taking the snapshot:")),
-          Right(Label(date))
+          Label(Id(:pre_date), _("Time of taking the first snapshot:")),
+          Right(Label(snapshot.pre.date))
+        ),
+        HBox(
+          # label, date string will follow at the end of line
+          Label(Id(:post_date), _("Time of taking the second snapshot:")),
+          Right(Label(snapshot.date))
         )
-      else
-        tree_label = "%{pre} && %{post}" % { :pre => pre_num, :post => snapshot_num }
-        date_widget = VBox(
-          HBox(
-            # label, date string will follow at the end of line
-            Label(Id(:pre_date), _("Time of taking the first snapshot:")),
-            Right(Label(pre_date))
-          ),
-          HBox(
-            # label, date string will follow at the end of line
-            Label(Id(:post_date), _("Time of taking the second snapshot:")),
-            Right(Label(date))
+      )
+    end
+
+    # helper function: show the specific modification between snapshots
+    def show_file_modification(file, from2, to2)
+      content = VBox()
+      # busy popup message
+      Popup.ShowFeedback("", _("Calculating file modifications..."))
+      modification = Snapper.GetFileModification(file.fullname, from2, to2)
+      Popup.ClearFeedback
+
+      status = modification["status"] || []
+
+      # Add label to the content
+      if status.include? "created"
+        content << Left(Label(_("New file was created.")))
+      elsif status.include? "removed"
+        content << Left(Label(_("File was removed.")))
+      elsif status.include? "no_change"
+        content << Left(Label(_("File content was not changed.")))
+      elsif status.include? "none"
+        content << Left(Label(_("File does not exist in either snapshot.")))
+      elsif status.include? "diff"
+        content << Left(Label(_("File content was modified.")))
+      end
+      if status.include? "mode"
+        content << Left(
+          Label(
+            # text label, %1, %2 are file modes (like '-rw-r--r--')
+            Builtins.sformat(
+              _("File mode was changed from '%1' to '%2'."),
+              modification["mode1"],
+              modification["mode2"]
+            )
           )
         )
       end
+      if status.include? "user"
+        content << Left(
+          Label(
+            # text label, %1, %2 are user names
+            Builtins.sformat(
+              _("File user ownership was changed from '%1' to '%2'."),
+              modification["user1"],
+              modification["user2"]
+            )
+          )
+        )
+      end
+      if status.include? "group"
+        # label
+        content <<
+          Left(
+            Label(
+              # text label, %1, %2 are group names
+              Builtins.sformat(
+                _("File group ownership was changed from '%1' to '%2'."),
+                modification["group1"],
+                modification["group2"]
+              )
+            )
+          )
+      end
 
-      contents = HBox(
+      content <<
+        if modification.key? "diff"
+          RichText(Id(:diff), format_diff(modification["diff"], textmode?))
+        else
+          VStretch()
+        end
+
+      # button label
+      restore_label = _("R&estore from First")
+      # button label
+      restore_label_single = _("Restore")
+
+      if file.created?
+        restore_label = Label.RemoveButton
+        restore_label_single = Label.RemoveButton
+      end
+
+      UI.ReplaceWidget(
+        Id(:diff_content),
+        HBox(
+          HSpacing(0.5),
+          VBox(
+            content,
+            VSquash(
+              HBox(
+                HStretch(),
+                from2.single? ? Empty() : PushButton(Id(:restore_pre), restore_label),
+                PushButton(
+                  Id(:restore),
+                  from2.single? ? restore_label_single : _("Res&tore from Second")
+                )
+              )
+            )
+          ),
+          HSpacing(0.5)
+        )
+      )
+      if from2.single? && file.deleted?
+        # file removed in 2nd snapshot cannot be restored from that snapshot
+        UI.ChangeWidget(Id(:restore), :Enabled, false)
+      end
+
+      nil
+    end
+
+    #### DIALOGS ####
+
+    def get_modify_args(s)
+      prefix = s.pre? ? "pre_" : ""
+      {
+        description: UI.QueryWidget(Id("#{prefix}description"), :Value),
+        cleanup:     UI.QueryWidget(Id("#{prefix}cleanup"), :Value),
+        user_data:   userdata("#{prefix}userdata")
+      }
+    end
+
+    def refresh_buttons
+      selected = UI.QueryWidget(Id(:snapshots_table), :SelectedItems) || []
+      enable_buttons([:show, :modify], selected.size == 1)
+      enable_buttons([:delete], selected.size >= 1)
+      enable_buttons([:configs], Snapper.configs.size > 1)
+    end
+
+    def selected_items(widget_id)
+      UI.QueryWidget(Id(widget_id), :SelectedItems) || []
+    end
+
+    def check_one_selection(selected)
+      if selected.size != 1
+        Popup.Message(_("You have to select one snapshot for this action."))
+        false
+      else
+        true
+      end
+    end
+
+    def copy_file?(current_filename, from)
+      Popup.YesNo(
+        Builtins.sformat(
+          _(
+            "Do you want to copy the file\n" \
+              "\n" \
+              "%1\n" \
+              "\n" \
+              "from snapshot '%2' to current system?"
+          ),
+          Snapper.GetFileFullPath(current_filename),
+          from.number
+        )
+      )
+    end
+
+    def delete_current_file?(current_filename)
+      Popup.YesNo(
+        Builtins.sformat(
+          _(
+            "Do you want to delete the file\n" \
+              "\n" \
+              "%1\n" \
+              "\n" \
+              "from current system?"
+          ),
+          Snapper.GetFileFullPath(current_filename)
+        )
+      )
+    end
+
+    def restore_files?(from, to_restore)
+      Popup.AnyQuestionRichText(
+        # popup headline
+        _("Restoring files"),
+        # popup message, %1 is snapshot number, %2 list of files
+        Builtins.sformat(
+          _(
+            "<p>These files will be restored from snapshot '%1':</p>\n" \
+              "<p>\n" \
+              "%2\n" \
+              "</p>\n" \
+              "<p>Files existing in original snapshot will be copied to current system.</p>\n" \
+              "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
+          ),
+          from.number,
+          to_restore.join("<br>")
+        ),
+        60,
+        20,
+        Label.YesButton,
+        Label.NoButton,
+        :focus_no
+      )
+    end
+
+    def really_abort?
+      Popup.ReallyAbort(true)
+    end
+
+    # Read settings dialog
+    # @return `abort if aborted and `next otherwise
+    def ReadDialog
+      return :abort if !Confirm.MustBeRoot
+
+      Wizard.RestoreHelp(@HELPS["read"])
+      Snapper.Init() ? :next : :abort
+    end
+
+    def open_modify_dialog(content)
+      UI.OpenDialog(
+        Opt(:decorated),
+        HBox(
+          HSpacing(1),
+          VBox(
+            VSpacing(0.5),
+            HSpacing(65),
+            content,
+            VSpacing(0.5),
+            ButtonBox(
+              PushButton(Id(:ok), Label.OKButton),
+              PushButton(Id(:cancel), Label.CancelButton)
+            ),
+            VSpacing(0.5)
+          ),
+          HSpacing(1)
+        )
+      )
+    end
+
+    def show_content(tree_label, date_widget, description)
+      HBox(
         HWeight(
           1,
           VBox(
@@ -989,10 +789,8 @@ module Yast
             HBox(
               HSpacing(1.5),
               HStretch(),
-              textmode ?
-                # button label
-                PushButton(Id(:open), Opt(:key_F6), _("&Open")) :
-                Empty(),
+              # button label
+              textmode? ? PushButton(Id(:open), Opt(:key_F6), _("&Open")) : Empty(),
               HSpacing(1.5)
             )
           )
@@ -1027,160 +825,117 @@ module Yast
           )
         )
       )
+    end
 
-      # show the dialog contents with empty tree, compute items later
-      Wizard.SetContentsButtons(
-        caption,
-        contents,
-        type == :SINGLE ?
-          Ops.get_string(@HELPS, "show_single", "") :
-          Ops.get_string(@HELPS, "show_pair", ""),
-        # button label
-        Label.CancelButton,
-        _("Restore Selected")
-      )
-
-      tree_items = generate_ui_file_tree(files_tree)
-
-      if !tree_items.empty?
-        UI.ReplaceWidget(
-          Id(:reptree),
-          VBox(
-            Left(Label(Snapper.current_subvolume)),
-            Tree(
-              Id(:tree),
-              Opt(:notify, :immediate, :multiSelection, :recursiveSelection),
-              tree_label,
-              tree_items
-            )
+    def snapshot_term(prefix, snapshot)
+      HBox(
+        HSpacing(),
+        Frame(
+          "",
+          HBox(
+            HSpacing(0.4),
+            VBox(
+              # text entry label
+              InputField(
+                Id("#{prefix}description"),
+                Opt(:hstretch),
+                _("Description"),
+                snapshot.description
+              ),
+              # text entry label
+              InputField(
+                Id("#{prefix}userdata"),
+                Opt(:hstretch),
+                _("User data"),
+                snapshot.user_data_to_s
+              ),
+              Left(
+                ComboBox(
+                  Id("#{prefix}cleanup"),
+                  Opt(:editable, :hstretch),
+                  # combo box label
+                  _("Cleanup algorithm"),
+                  cleanup_items(snapshot.cleanup)
+                )
+              )
+            ),
+            HSpacing(0.4)
           )
-        )
-        # no item is selected
-        UI.ChangeWidget(:tree, :CurrentItem, nil)
+        ),
+        HSpacing()
+      )
+    end
+
+    def update_snapshots
+      # busy popup message
+      Popup.Feedback("", _("Reading list of snapshots...")) do
+        Snapper.ReadSnapshots()
       end
 
+      UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items)
+      refresh_buttons
+    end
+
+    def show_event_loop(snapshot, from, to, files_tree)
       current_filename = ""
-
-      set_entry_term.call
-
-      UI.SetFocus(Id(:tree)) if textmode
-
       ret = nil
-      while true
+
+      loop do
         event = UI.WaitForEvent
-        ret = Ops.get_symbol(event, "ID")
+        ret = event["ID"]
 
         previous_filename = current_filename
-        current_filename = UI.QueryWidget(Id(:tree), :CurrentItem)
+        current_filename = UI.QueryWidget(Id(:tree), :CurrentItem).to_s
 
-        if current_filename == nil
-          current_filename = ""
-        else
-          current_filename.force_encoding(Encoding::ASCII_8BIT)
-        end
+        current_filename.force_encoding(Encoding::ASCII_8BIT)
 
-        if current_filename.empty?
-          current_file = nil
-        else
-          current_file = files_tree.find(current_filename)
-        end
+        current_file = current_filename.empty? ? nil : files_tree.find(current_filename)
 
         # other tree events
         if ret == :tree
           # seems like tree widget emits 2 SelectionChanged events
           if current_filename != previous_filename
-            set_entry_term.call
-            UI.SetFocus(Id(:tree)) if textmode
+            set_entry_term(snapshot, current_file)
+            UI.SetFocus(Id(:tree)) if textmode?
           end
-
         elsif ret == :diff_snapshot
-          if type == :SINGLE
+          if snapshot.single?
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
-            show_file_modification.call(current_file, snapshot_num, 0)
-          else
-            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
-
+          show_file_modification(current_file, from, to)
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
           UI.ChangeWidget(Id(:selection_snapshots), :Enabled, true)
-          selected_num = Convert.to_integer(
-            UI.QueryWidget(Id(:selection_snapshots), :Value)
-          )
-          show_file_modification.call(current_file, pre_num, selected_num)
-
+          selected_num = UI.QueryWidget(Id(:selection_snapshots), :Value).to_i
+          selected = Snapshot.find(selected_num)
+          show_file_modification(current_file, from, selected)
         elsif ret == :diff_pre_current
-          show_file_modification.call(current_file, pre_num, 0)
-
+          show_file_modification(current_file, from, to)
         elsif ret == :diff_post_current
-          show_file_modification.call(current_file, snapshot_num, 0)
-
+          show_file_modification(current_file, from, to)
         elsif ret == :abort || ret == :cancel || ret == :back
           break
-
-        elsif (ret == :restore_pre || ret == :restore && type == :SINGLE) &&
+        elsif (ret == :restore_pre || ret == :restore && snapshot.single?) &&
             current_file.created?
           # yes/no question, %1 is file name, %2 is number
-          if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to delete the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename)
-              )
-            )
-            Snapper.RestoreFiles(
-              ret == :restore_pre ? pre_num : snapshot_num,
-              [current_filename]
-            )
+          if delete_current_file?(current_filename)
+            Snapper.RestoreFiles((ret == :restore_pre ? from : snapshot), [current_filename])
           end
           next
-
         elsif ret == :restore_pre
           # yes/no question, %1 is file name, %2 is number
-          if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to copy the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from snapshot '%2' to current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename),
-                pre_num
-              )
-            )
-            Snapper.RestoreFiles(pre_num, [current_filename])
+          if copy_file?(current_filename, from)
+            Snapper.RestoreFiles(from, [current_filename])
           end
           next
-
         elsif ret == :restore
           # yes/no question, %1 is file name, %2 is number
-          if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to copy the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from snapshot '%2' to current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename),
-                snapshot_num
-              )
-            )
-            Snapper.RestoreFiles(snapshot_num, [current_filename])
+          if copy_file?(current_filename, snapshot)
+            Snapper.RestoreFiles(snapshot, [current_filename])
           end
           next
-
         elsif ret == :next
-
           filenames = UI.QueryWidget(Id(:tree), :SelectedItems)
-          filenames.map!{ |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
+          filenames.map! { |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
 
           # remove filenames not changed between the snapshots, e.g. /foo if
           # only /foo/bar changed
@@ -1196,43 +951,180 @@ module Yast
             String.EscapeTags(Snapper.prepend_subvolume(filename))
           end
 
-          if Popup.AnyQuestionRichText(
-               # popup headline
-              _("Restoring files"),
-              # popup message, %1 is snapshot number, %2 list of files
-              Builtins.sformat(
-                _(
-                  "<p>These files will be restored from snapshot '%1':</p>\n" +
-                    "<p>\n" +
-                    "%2\n" +
-                    "</p>\n" +
-                    "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
-                    "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
-                ),
-                pre_num,
-                to_restore.join("<br>")
-              ),
-              60,
-              20,
-              Label.YesButton,
-              Label.NoButton,
-              :focus_no
-            )
-            Snapper.RestoreFiles(pre_num, filenames)
+          if restore_files?(from, to_restore)
+            Snapper.RestoreFiles(from, filenames)
             break
           end
           next
-
         else
-          Builtins.y2error("unexpected retcode: %1", ret)
+          log.error "unexpected retcode: #{ret}"
+          next
+        end
+      end
+
+      ret
+    end
+
+    # main loop for summary dialog
+    def summary_event_loop
+      ret = nil
+      loop do
+        ret = UI.UserInput
+        selected = selected_items(:snapshots_table)
+
+        case ret
+        when :abort, :cancel, :back
+          really_abort? ? break : next
+        when :show
+          next if !check_one_selection(selected)
+          snapshot = Snapper.snapshots[selected.first]
+          if snapshot.pre? && !snapshot.post
+            # popup message
+            Popup.Message(
+              _(
+                "This 'Pre' snapshot is not paired with any 'Post' one yet.\n" \
+                "Showing differences is not possible."
+              )
+            )
+            next
+          end
+          # `POST snapshot is selected from the pair
+          Snapper.selected_snapshot = snapshot
+          break
+        when :configs
+          config = UI.QueryWidget(Id(ret), :Value).to_s
+          if config != Snapper.current_config
+            Snapper.current_config = config
+            update_snapshots
+          end
+        when :create
+          update_snapshots if CreateSnapshotPopup(pre_lonely_snapshots_num)
+        when :modify
+          next if !check_one_selection(selected)
+          update_snapshots if ModifySnapshotPopup(Snapper.snapshots[selected.first])
+        when :delete
+          update_snapshots if DeleteSnapshotPopup(selected_snapshots(selected))
+        when :next
+          break
+        when :snapshots_table
+          enable_buttons([:show, :modify], selected.size == 1)
+          enable_buttons([:delete], selected.size >= 1)
+        else
+          log.error "unexpected retcode: #{ret}"
+        end
+      end
+
+      ret
+    end
+
+    # NEW CODE
+    def snapshot_table_item(s, i)
+      if s.post?
+        post_snapshot_item(s, i)
+      else
+        Item(Id(i), s.number, s.name, s.date, "", s.description, s.user_data_to_s)
+      end
+    end
+
+    def post_snapshot_item(s, i)
+      start_date = s.pre ? s.pre.date : ""
+      Item(
+        Id(i),
+        "#{s.pre.number} & #{s.number}",
+        "Pre & Post",
+        start_date,
+        s.date,
+        s.description,
+        s.user_data_to_s
+      )
+    end
+
+    # Pre Snapshots with a Post are skiped because
+    # related information is showed in the Post Item
+    # @return Item list for Snapshots Table
+    def get_snapshot_items
+      snapshot_items = []
+
+      Yast::Snapshot.all(Snapper.current_config).each_with_index do |s, i|
+        if s.pre? && s.post
+          log.info "skipping pre snapshot: #{s.number}"
           next
         end
 
+        snapshot_items << snapshot_table_item(s, i) if s.valid?
       end
 
-      deep_copy(ret)
+      snapshot_items
     end
 
-  end
+    def config_items
+      Snapper.configs.map do |config|
+        Item(Id(config), config, config == Snapper.current_config)
+      end
+    end
 
+    def config_select
+      HBox(
+        # combo box label
+        Label(_("Current Configuration")),
+        ComboBox(Id(:configs), Opt(:notify), "", config_items),
+        HStretch()
+      )
+    end
+
+    def snapshots_table
+      VBox(
+        config_select,
+        Table(
+          Id(:snapshots_table),
+          Opt(:notify, :keepSorting, :multiSelection, :immediate),
+          Header(
+            # table header
+            _("ID"),
+            _("Type"),
+            _("Start Date"),
+            _("End Date"),
+            _("Description"),
+            _("User Data")
+          ),
+          get_snapshot_items
+        ),
+        snapshots_table_footer
+      )
+    end
+
+    def snapshots_table_footer
+      HBox(
+        # button label
+        PushButton(Id(:show), Opt(:default), _("Show Changes")),
+        PushButton(Id(:create), Label.CreateButton),
+        # button label
+        PushButton(Id(:modify), _("Modify")),
+        PushButton(Id(:delete), Label.DeleteButton),
+        HStretch()
+      )
+    end
+
+    def selected_snapshots(selection)
+      selection.map do |s|
+        Snapper.snapshots[s]
+      end
+    end
+
+    def pre_lonely_snapshots_num
+      pre_lonely_snapshots.map(&:number)
+    end
+
+    def pre_lonely_snapshots
+      Snapper.snapshots.select(&:pre?)
+    end
+
+    def combo_items
+      snap = Snapper.selected_snapshot
+      Snapper.snapshots.reject { |s| s == snap }.map do |snapshot|
+        # '%1: %2' means 'ID: description', adapt the order if necessary
+        Item(Id(snapshot.number), format(_("%1s: %2s"), snapshot.number, snapshot.description))
+      end
+    end
+  end
 end

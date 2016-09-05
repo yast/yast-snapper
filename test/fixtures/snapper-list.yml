@@ -1,0 +1,95 @@
+---
+var:
+  -
+    - 0
+    - 0
+    - 0
+    - -1
+    - 0
+    - current
+    - number
+    - {}
+  -
+    - 1
+    - 1
+    - 0
+    - 2015-11-13T04:14:14
+    - 0
+    - zypp(y2base)
+    - number
+    -
+      important: 'no'
+  -
+    - 3
+    - 0
+    - 0
+    - 2015-11-13T05:01:47
+    - 0
+    - zypp(zypper)
+    - number
+    - important: 'no'
+  -
+    - 5
+    - 2
+    - 3
+    - 2015-11-13T05:03:11
+    - 0
+    - zypp(zypper)
+    - number
+    - important: 'no'
+  -
+    - 6
+    - 0
+    - 0
+    - 2015-11-13T05:11:25
+    - 0
+    - ''
+    - number
+    - important: 'no'
+opt:
+  -
+    - 0
+    - 0
+    - 0
+    - -1
+    - 0
+    - current
+    - number
+    - {}
+  -
+    - 2
+    - 1
+    - 0
+    - 2015-11-13T04:37:21
+    - 0
+    - zypp(zypper)
+    - number
+    - important: 'no'
+
+  -
+    - 4
+    - 1
+    - 0
+    - 2015-11-13T05:02:49
+    - 0
+    - zypp(zypper)
+    - number
+    - important: 'no'
+  -
+    - 7
+    - 2
+    - 4
+    - 2015-11-13T05:13:11
+    - 0
+    - zypp(zypper)
+    - number
+    - important: 'no'
+  -
+    - 8
+    - 0
+    - 0
+    - 2015-11-13T05:25:11
+    - 0
+    - arf
+    - number
+    - important: 'no'
