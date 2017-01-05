@@ -28,20 +28,11 @@ module Yast
     include Yast::Logger
 
     def main
-
-      log.info("connecting to snapperd")
-
-      @system_bus = DBus::SystemBus.instance()
-      @service = @system_bus.service("org.opensuse.Snapper")
-      @dbus_object = @service.object("/org/opensuse/Snapper")
-      @dbus_object.default_iface = "org.opensuse.Snapper"
-      @dbus_object.introspect()
-
     end
 
 
     def list_configs
-      result = @dbus_object.ListConfigs().first
+      result = dbus_object.ListConfigs().first
       log.debug("list_configs result:#{result}")
 
       result.map(&:first)
@@ -49,7 +40,7 @@ module Yast
 
 
     def get_config(config_name)
-      result = @dbus_object.GetConfig(config_name).first
+      result = dbus_object.GetConfig(config_name).first
       log.debug("get_config for name '#{config_name}' result:#{result}")
 
       result
@@ -63,7 +54,7 @@ module Yast
     }
 
     def list_snapshots(config_name)
-      result = @dbus_object.ListSnapshots(config_name).first
+      result = dbus_object.ListSnapshots(config_name).first
       log.debug("list_snapshots for name #{config_name} result:#{result}")
 
       ret = result.map do |snapshot|
@@ -87,7 +78,7 @@ module Yast
 
 
     def create_single_snapshot(config_name, description, cleanup, userdata)
-      result = @dbus_object.CreateSingleSnapshot(config_name, escape(description), escape(cleanup),
+      result = dbus_object.CreateSingleSnapshot(config_name, escape(description), escape(cleanup),
                                                  escape(userdata)).first
       log.debug("create_single_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result:#{result}")
@@ -97,7 +88,7 @@ module Yast
 
 
     def create_pre_snapshot(config_name, description, cleanup, userdata)
-      result = @dbus_object.CreatePreSnapshot(config_name, escape(description), escape(cleanup),
+      result = dbus_object.CreatePreSnapshot(config_name, escape(description), escape(cleanup),
                                               escape(userdata)).first
       log.debug("create_pre_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result: #{result}")
@@ -107,7 +98,7 @@ module Yast
 
 
     def create_post_snapshot(config_name, prenum, description, cleanup, userdata)
-      result = @dbus_object.CreatePostSnapshot(config_name, prenum, escape(description),
+      result = dbus_object.CreatePostSnapshot(config_name, prenum, escape(description),
                                                escape(cleanup), escape(userdata)).first
       log.debug("create_post_snapshot config_name:#{config_name} prenum:#{prenum} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata}"\
@@ -118,7 +109,7 @@ module Yast
 
 
     def delete_snapshots(config_name, nums)
-      result = @dbus_object.DeleteSnapshots(config_name, nums).first
+      result = dbus_object.DeleteSnapshots(config_name, nums).first
       log.debug("delete_snapshots config_name:#{config_name} nums:#{nums} result:#{result}")
 
       result
@@ -126,7 +117,7 @@ module Yast
 
 
     def set_snapshot(config_name, num, description, cleanup, userdata)
-      result = @dbus_object.SetSnapshot(config_name, num, escape(description), escape(cleanup),
+      result = dbus_object.SetSnapshot(config_name, num, escape(description), escape(cleanup),
                                         escape(userdata)).first
       log.debug("set_snapshot config_name:#{config_name} num:#{num} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata} "\
@@ -137,7 +128,7 @@ module Yast
 
 
     def get_mount_point(config_name, num)
-      result = @dbus_object.GetMountPoint(config_name, num).first
+      result = dbus_object.GetMountPoint(config_name, num).first
       log.debug("get_mount_point config_name:#{config_name} num:#{num} result#{result}")
 
       result
@@ -145,7 +136,7 @@ module Yast
 
 
     def create_comparison(config_name, num1, num2)
-      result = @dbus_object.CreateComparison(config_name, num1, num2).first
+      result = dbus_object.CreateComparison(config_name, num1, num2).first
       log.debug("create_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
                "result: #{result}")
 
@@ -154,7 +145,7 @@ module Yast
 
 
     def delete_comparison(config_name, num1, num2)
-      result = @dbus_object.DeleteComparison(config_name, num1, num2).first
+      result = dbus_object.DeleteComparison(config_name, num1, num2).first
       log.debug("delete_comparison config_name:#{config_name} num1:#{num1} num2:#{num2} "\
                "result:#{result}")
 
@@ -163,7 +154,7 @@ module Yast
 
 
     def get_files(config_name, num1, num2)
-      result = @dbus_object.GetFiles(config_name, num1, num2).first
+      result = dbus_object.GetFiles(config_name, num1, num2).first
       log.debug("get_files config_name:#{config_name} num1:#{num1} num2:#{num2} result:#{result}")
 
       result.map do |file|
@@ -173,6 +164,19 @@ module Yast
 
 
     private
+
+    def dbus_object
+      return @dbus_object if @dbus_object
+
+      log.info("connecting to snapperd")
+
+      @system_bus = DBus::SystemBus.instance()
+      @service = @system_bus.service("org.opensuse.Snapper")
+      @dbus_object = @service.object("/org/opensuse/Snapper")
+      @dbus_object.default_iface = "org.opensuse.Snapper"
+      @dbus_object.introspect()
+      @dbus_object
+    end
 
     # Escape a String or Hash for snapperd. See snapper dbus documentation for details.
     def escape(str)
