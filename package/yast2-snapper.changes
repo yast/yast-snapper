@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Jan  5 14:15:57 UTC 2017 - jreidinger@suse.com
+
+- Fixed tests to pass with the latest yast2-core and
+  yast2-ruby-bindings packages (related to the bsc#932331 fix)
+- 3.2.0
+
+-------------------------------------------------------------------
 Tue Jun  7 08:25:45 UTC 2016 - igonzalezsosa@suse.com
 
 - Stop generating autodocs (fate#320356)
