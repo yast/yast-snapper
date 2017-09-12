@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Sep 12 07:12:53 UTC 2017 - igonzalezsosa@suse.com
+
+- Add missing dependency on ruby-dbus library (bsc#1058127)
+- 4.0.0
+
+-------------------------------------------------------------------
 Thu Jan  5 14:15:57 UTC 2017 - jreidinger@suse.com
 
 - Fixed tests to pass with the latest yast2-core and

@@ -1,13 +1,10 @@
 #!/usr/bin/env rspec
 
-ENV["Y2DIR"] = File.expand_path("../../src", __FILE__)
-
-require "yast"
+require_relative "test_helper"
 
 Yast.import "Snapper"
 
 describe Yast::SnapperClass::Tree do
-
   subject { Yast::SnapperClass::Tree.new("", nil) }
 
   describe "#each" do

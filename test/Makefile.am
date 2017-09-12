@@ -3,11 +3,9 @@
 #
 
 TESTS =									\
-	snapper_dbus_escape_test.rb					\
-	snapper_dbus_unescape_test.rb					\
-	snapper_string_to_userdata_test.rb				\
-	snapper_tree_test.rb						\
-	snapper_userdata_to_string_test.rb
+	snapper_test.rb					\
+	snapper_dbus_test.rb					\
+	snapper_tree_test.rb
 
 TEST_EXTENSIONS = .rb
 RB_LOG_COMPILER = rspec

@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        3.2.0
+Version:        4.0.0
 Release:        0
 Group:		System/YaST
 
@@ -29,17 +29,17 @@ Source0:        %{name}-%{version}.tar.bz2
 
 License:        GPL-2.0
 
-BuildRequires:	doxygen
-BuildRequires:	update-desktop-files
-BuildRequires:	yast2
-BuildRequires:	yast2-devtools >= 3.1.10
-BuildRequires:  rubygem(rspec)
-BuildRequires:	rubygem(ruby-dbus)
-
-Requires:	yast2 >= 2.21.22
+BuildRequires:  doxygen
+BuildRequires:  update-desktop-files
+BuildRequires:  yast2
+BuildRequires:  yast2-devtools >= 3.1.10
+BuildRequires:  rubygem(%{rb_default_ruby_abi}:rspec)
+BuildRequires:  rubygem(%{rb_default_ruby_abi}:ruby-dbus)
+Requires:       snapper
+Requires:       yast2 >= 2.21.22
 Requires:       yast2-ruby-bindings >= 1.0.0
-Requires:	snapper
-Supplements:	packageand(snapper:yast2)
+Requires:       rubygem(%{rb_default_ruby_abi}:ruby-dbus)
+Supplements:    packageand(snapper:yast2)
 
 Summary:	YaST - file system snapshots review
 Url:            http://github.com/yast/yast-snapper/
