@@ -13,6 +13,7 @@ config.sub
 configure
 configure.ac
 depcomp
+doc/
 install-sh
 *.pot
 libtool
@@ -29,3 +30,4 @@ tmp.*
 *.log
 *.ybc
 test-driver
+.yardoc/
