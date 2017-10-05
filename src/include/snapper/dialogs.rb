@@ -158,13 +158,13 @@ module Yast
       if type != :POST
         cont = VBox(
           # popup label, %{num} is number
-          Label(_("Modify Snapshot %{num}") % { :num => num }),
+          Heading(_("Modify Snapshot %{num}") % { :num => num }),
           snapshot_term.call("", snapshot)
         )
       else
         cont = VBox(
           # popup label, %{pre} and %{post} are numbers
-          Label(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
+          Heading(_("Modify Snapshot %{pre} and %{post}") % { :pre => pre_num, :post => num }),
           # label
           Left(Label(_("Pre (%{pre})") % { :pre => pre_num })),
           snapshot_term.call("pre_", pre_snapshot),
@@ -247,7 +247,7 @@ module Yast
             VSpacing(0.5),
             HSpacing(65),
             # popup label
-            Label(_("Create New Snapshot")),
+            Heading(_("Create New Snapshot")),
             # text entry label
             InputField(Id("description"), Opt(:hstretch), _("Description"), ""),
             RadioButtonGroup(
