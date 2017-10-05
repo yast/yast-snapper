@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Oct 05 11:57:30 CEST 2017 - aschnell@suse.com
+
+- make dialog caption bigger (bsc#1061498)
+- 4.0.1
+
+-------------------------------------------------------------------
 Tue Sep 12 07:12:53 UTC 2017 - igonzalezsosa@suse.com
 
 - Add missing dependency on ruby-dbus library (bsc#1058127)
