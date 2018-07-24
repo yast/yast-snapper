@@ -667,7 +667,7 @@ module Yast
             Item(
               Id(id),
               Builtins.sformat(
-                _("%1: %2"),
+                "%1: %2", # must not to be translated (bnc#1086633)
                 id,
                 Ops.get_string(s, "description", "")
               )
