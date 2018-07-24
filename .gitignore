@@ -29,3 +29,6 @@ tmp.*
 *.log
 *.ybc
 test-driver
+
+/.yardoc
+/doc
