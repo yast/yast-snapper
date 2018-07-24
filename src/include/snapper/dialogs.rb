@@ -666,8 +666,13 @@ module Yast
             combo_items,
             Item(
               Id(id),
+              # "%1: %2" must not to be translated (bnc#1086633)
+              # because "description" is already a translated string
+              # and it seems that for some translations this could be a
+              # problem regarding UTF-8 encoding. E.g. zh_CN.UTF-8 in our case
+              # here.
               Builtins.sformat(
-                _("%1: %2"),
+                "%1: %2",
                 id,
                 Ops.get_string(s, "description", "")
               )
