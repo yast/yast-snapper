@@ -937,7 +937,7 @@ module Yast
                 HSpacing(0.5)
               )
             )
-            show_file_modification.call(current_file, pre_num, snapshot_num)
+            show_file_modification.call(current_file, from, to)
           end
         else
           UI.ReplaceWidget(Id(:diff_chooser), VBox(VStretch()))
@@ -955,7 +955,7 @@ module Yast
           Right(Label(date))
         )
       else
-        tree_label = "%{pre} && %{post}" % { :pre => pre_num, :post => snapshot_num }
+        tree_label = "%{pre} && %{post}" % { :pre => from, :post => to }
         date_widget = VBox(
           HBox(
             # label, date string will follow at the end of line
@@ -1092,10 +1092,8 @@ module Yast
         elsif ret == :diff_snapshot
           if type == :SINGLE
             UI.ChangeWidget(Id(:selection_snapshots), :Enabled, false)
-            show_file_modification.call(current_file, snapshot_num, 0)
-          else
-            show_file_modification.call(current_file, pre_num, snapshot_num)
           end
+          show_file_modification.call(current_file, from, to)
 
         elsif ret == :diff_arbitrary || ret == :selection_snapshots
           UI.ChangeWidget(Id(:selection_snapshots), :Enabled, true)
@@ -1166,10 +1164,10 @@ module Yast
                     "from snapshot '%2' to current system?"
                 ),
                 Snapper.GetFileFullPath(current_filename),
-                snapshot_num
+                from
               )
             )
-            Snapper.RestoreFiles(snapshot_num, [current_filename])
+            Snapper.RestoreFiles(from, [current_filename])
           end
           next
 
@@ -1205,7 +1203,7 @@ module Yast
                     "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
                     "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
                 ),
-                pre_num,
+                from,
                 to_restore.join("<br>")
               ),
               60,
@@ -1214,7 +1212,7 @@ module Yast
               Label.NoButton,
               :focus_no
             )
-            Snapper.RestoreFiles(pre_num, filenames)
+            Snapper.RestoreFiles(from, filenames)
             break
           end
           next
