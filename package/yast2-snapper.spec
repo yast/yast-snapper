@@ -65,3 +65,4 @@ YaST module for accessing and managing file-system snapshots
 %{yast_moduledir}/SnapperDbus.rb
 %{yast_desktopdir}/snapper.desktop
 %doc %{yast_docdir}
+%license COPYING
