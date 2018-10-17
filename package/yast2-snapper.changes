@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Oct 17 12:18:31 UTC 2018 - Stefan Hundhammer <shundhammer@suse.com>
+
+- Better module description for YaST control center (bsc#1085071)
+- 4.0.5
+
+-------------------------------------------------------------------
 Tue Oct 16 15:06:59 CEST 2018 - schubi@suse.de
 
 - Added license file to spec.

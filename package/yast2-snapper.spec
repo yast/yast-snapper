@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        4.0.4
+Version:        4.0.5
 Release:        0
 Group:		System/YaST
 
