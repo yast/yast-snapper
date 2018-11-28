@@ -8,8 +8,5 @@
 @YAST2-CHECKS-COMMON@
 @YAST2-CHECKS-YCP@
 
-
-
-
 ## and generate the output...
 @YAST2-OUTPUT@
