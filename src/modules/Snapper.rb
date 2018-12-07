@@ -176,7 +176,7 @@ module Yast
           SCR.Execute(
             path(".target.bash_output"),
             Builtins.sformat(
-              "ls -ld -- '%1' '%2' | cut -f 1,3,4 -d ' '",
+              "/usr/bin/ls -ld -- '%1' '%2' | /usr/bin/cut -f 1,3,4 -d ' '",
               String.Quote(file1),
               String.Quote(file2)
             )
