@@ -25,11 +25,8 @@
 # Authors:	Jiri Suchomel <jsuchome@suse.cz>
 
 module Yast
-
   module SnapperDialogsInclude
-
     include Yast::Logger
-
 
     def initialize_snapper_dialogs(include_target)
       Yast.import "UI"
@@ -47,16 +44,13 @@ module Yast
       Yast.include include_target, "snapper/helps.rb"
     end
 
-
     def timestring(t)
       return t.strftime("%F %T")
     end
 
-
     def ReallyAbort
       Popup.ReallyAbort(true)
     end
-
 
     # Read settings dialog
     # @return `abort if aborted and `next otherwise
@@ -68,12 +62,10 @@ module Yast
       ret ? :next : :abort
     end
 
-
     # transform userdata from widget to map
     def get_userdata(id)
       return Snapper.string_to_userdata(UI.QueryWidget(Id(id), :Value))
     end
-
 
     # generate list of items for Cleanup combo box
     def cleanup_items(current)
@@ -81,7 +73,6 @@ module Yast
         Item(Id(cleanup), cleanup, cleanup == current)
       end
     end
-
 
     # compare editable parts of snapshot maps
     def snapshot_modified(orig, new)
@@ -94,14 +85,12 @@ module Yast
       ret
     end
 
-    
     # grouped enable condition based on snapshot presence for modification widgets
     def enable_snapshot_buttons(condition)
-      UI.ChangeWidget(Id(:show), :Enabled, condition) 
+      UI.ChangeWidget(Id(:show), :Enabled, condition)
       UI.ChangeWidget(Id(:modify), :Enabled, condition)
       UI.ChangeWidget(Id(:delete), :Enabled, condition)
     end
-
 
     # Popup for modification of existing snapshot
     # @return true if new snapshot was created
@@ -229,7 +218,6 @@ module Yast
       modified
     end
 
-
     # Popup for creating new snapshot
     # @return true if new snapshot was created
     def CreateSnapshotPopup(pre_snapshots)
@@ -317,12 +305,12 @@ module Yast
       UI.ChangeWidget(
         Id("post"),
         :Enabled,
-	!pre_items.empty?
+        !pre_items.empty?
       )
       UI.ChangeWidget(
         Id(:pre_list),
         :Enabled,
-	!pre_items.empty?
+        !pre_items.empty?
       )
 
       ret = nil
@@ -343,7 +331,6 @@ module Yast
       created
     end
 
-
     # Popup for deleting existing snapshot
     # @return true if snapshot was deleted
     def DeleteSnapshotPopup(snapshot)
@@ -356,7 +343,7 @@ module Yast
 
         # yes/no popup question
         if Popup.YesNo(_("Really delete snapshot %{num}?") % { :num => num })
-          return Snapper.DeleteSnapshot([ num ])
+          return Snapper.DeleteSnapshot([num])
         end
 
       else
@@ -364,14 +351,13 @@ module Yast
         # yes/no popup question
         if Popup.YesNo(_("Really delete snapshots %{pre} and %{post}?") %
                        { :pre => pre_num, :post => num })
-          return Snapper.DeleteSnapshot([ pre_num, num ])
+          return Snapper.DeleteSnapshot([pre_num, num])
         end
 
       end
 
       false
     end
-
 
     # Summary dialog
     # @return dialog result
@@ -473,11 +459,10 @@ module Yast
         Popup.ClearFeedback
 
         UI.ChangeWidget(Id(:snapshots_table), :Items, get_snapshot_items.call)
-	enable_snapshot_buttons(!snapshot_items.empty?)
+        enable_snapshot_buttons(!snapshot_items.empty?)
 
         nil
       end
-
 
       contents = VBox(
         HBox(
@@ -528,7 +513,7 @@ module Yast
       UI.ChangeWidget(
         Id(:configs),
         :Enabled,
-	configs.size > 1
+        configs.size > 1
       )
 
       ret = nil
@@ -599,14 +584,12 @@ module Yast
       deep_copy(ret)
     end
 
-
     def generate_ui_file_tree(subtree)
       return subtree.children.map do |file|
         Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
              generate_ui_file_tree(file))
       end
     end
-
 
     def format_diff(diff, textmode)
       lines = Builtins.splitstring(String.EscapeTags(diff), "\n")
@@ -630,10 +613,8 @@ module Yast
       return ret
     end
 
-
     # @return dialog result
     def ShowDialog
-
       # dialog caption
       caption = _("Selected Snapshot Overview")
 
@@ -829,7 +810,6 @@ module Yast
         nil
       end
 
-
       # create the term for selected file
       set_entry_term = lambda do
         if current_file && current_file.status != 0
@@ -870,7 +850,7 @@ module Yast
                             ),
                             HBox(
                               HSpacing(2),
-                              # FIXME without label, there's no shortcut!
+                              # FIXME: without label, there's no shortcut!
                               Left(
                                 ComboBox(
                                   Id(:selection_snapshots),
@@ -1134,7 +1114,7 @@ module Yast
                 ),
                 Snapper.GetFileFullPath(current_filename)
               )
-            )
+          )
             Snapper.RestoreFiles(
               ret == :restore_pre ? pre_num : snapshot_num,
               [current_filename]
@@ -1156,7 +1136,7 @@ module Yast
                 Snapper.GetFileFullPath(current_filename),
                 pre_num
               )
-            )
+          )
             Snapper.RestoreFiles(pre_num, [current_filename])
           end
           next
@@ -1175,7 +1155,7 @@ module Yast
                 Snapper.GetFileFullPath(current_filename),
                 from
               )
-            )
+          )
             Snapper.RestoreFiles(from, [current_filename])
           end
           next
@@ -1200,7 +1180,7 @@ module Yast
           end
 
           if Popup.AnyQuestionRichText(
-               # popup headline
+              # popup headline
               _("Restoring files"),
               # popup message, %1 is snapshot number, %2 list of files
               Builtins.sformat(
@@ -1220,7 +1200,7 @@ module Yast
               Label.YesButton,
               Label.NoButton,
               :focus_no
-            )
+          )
             Snapper.RestoreFiles(from, filenames)
             break
           end
@@ -1235,7 +1215,5 @@ module Yast
 
       deep_copy(ret)
     end
-
   end
-
 end

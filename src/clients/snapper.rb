@@ -27,13 +27,11 @@
 # Main file for snapper configuration. Uses all other files.
 
 module Yast
-
   class SnapperClient < Client
 
     include Yast::Logger
 
     def main
-
       Yast.import "UI"
 
       textdomain "snapper"
@@ -57,11 +55,9 @@ module Yast
       log.info("----------------------------------------")
 
       deep_copy(ret)
-
     end
 
   end
-
 end
 
 Yast::SnapperClient.new.main

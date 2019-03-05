@@ -29,14 +29,12 @@
 require "yast"
 
 module Yast
-
   class SnapperClass < Module
 
     include Yast::Logger
 
     attr_reader :current_config
     attr_reader :current_subvolume
-
 
     def main
       Yast.import "UI"
@@ -62,29 +60,23 @@ module Yast
 
       @current_config = ""
       @current_subvolume = ""
-
     end
 
-
     def current_config=(current_config)
-
       @current_config = current_config
 
       if !@current_config.empty?
-        @current_subvolume = get_config()[1]
+        @current_subvolume = get_config[1]
       else
         @current_subvolume = ""
       end
 
       log.info("current_config:#{@current_config} current_subvolume:#{@current_subvolume}")
-
     end
-
 
     # Return Tree of files modified between given snapshots
     # Map is recursively describing the filesystem structure; helps to build Tree widget contents
     def ReadModifiedFilesTree(from, to)
-
       SnapperDbus.create_comparison(@current_config, from, to)
       files = SnapperDbus.get_files(@current_config, from, to)
       SnapperDbus.delete_comparison(@current_config, from, to)
@@ -96,20 +88,15 @@ module Yast
       end
 
       return root
-
     end
 
-
-    def get_config()
-
+    def get_config
       return SnapperDbus.get_config(@current_config)
 
     rescue Exception => e
       Report.Error(_("Failed to get config:" + "\n" + e.message))
       return {}
-
     end
-
 
     def prepend_subvolume(filename)
       if @current_subvolume == "/"
@@ -119,18 +106,14 @@ module Yast
       end
     end
 
-
     # Return the path to given snapshot
     def GetSnapshotPath(snapshot_num)
-
       return SnapperDbus.get_mount_point(@current_config, snapshot_num)
 
     rescue Exception => e
       Report.Error(_("Failed to get snapshot mount point:" + "\n" + e.message))
       return ""
-
     end
-
 
     # Return the full path to the given file from currently selected configuration (subvolume)
     # @param [String] file path, relatively to current config
@@ -138,7 +121,6 @@ module Yast
     def GetFileFullPath(file)
       return prepend_subvolume(file)
     end
-
 
     # Describe what was done with given file between given snapshots
     # - when new is 0, meaning is 'current system'
@@ -210,10 +192,8 @@ module Yast
       deep_copy(ret)
     end
 
-
     # Read the list of snapshots
     def ReadSnapshots
-
       snapshot_maps = SnapperDbus.list_snapshots(@current_config)
 
       @snapshots = []
@@ -238,10 +218,8 @@ module Yast
       true
     end
 
-
     def ReadConfigs
-
-      @configs = SnapperDbus.list_configs()
+      @configs = SnapperDbus.list_configs
 
       if @configs.include?("root")
         self.current_config = "root"
@@ -250,14 +228,11 @@ module Yast
       else
         self.current_config = ""
       end
-
     end
-
 
     # Create new snapshot
     # Return true on success
     def CreateSnapshot(args)
-
       case args["type"]
       when "single"
         SnapperDbus.create_single_snapshot(@current_config, args["description"], args["cleanup"],
@@ -277,11 +252,9 @@ module Yast
       return false
     end
 
-
     # Modify existing snapshot
     # Return true on success
     def ModifySnapshot(args)
-
       SnapperDbus.set_snapshot(@current_config, args["num"], args["description"], args["cleanup"],
                                args["userdata"])
 
@@ -290,14 +263,11 @@ module Yast
     rescue Exception => e
       Report.Error(_("Failed to modify snapshot:" + "\n" + e.message))
       return false
-
     end
-
 
     # Delete existing snapshot
     # Return true on success
     def DeleteSnapshot(nums)
-
       SnapperDbus.delete_snapshots(@current_config, nums)
 
       return true
@@ -305,17 +275,14 @@ module Yast
     rescue Exception => e
       Report.Error(_("Failed to delete snapshot:" + "\n" + e.message))
       return false
-
     end
-
 
     # Init snapper (get configs and snapshots)
     # Return true on success
     def Init
-
       # We do not set help text here, because it was set outside
       Progress.New(
-       # Snapper read dialog caption
+        # Snapper read dialog caption
         _("Initializing Snapper"),
         " ",
         2,
@@ -323,7 +290,7 @@ module Yast
           # Progress stage 1/2
           _("Read list of configurations"),
           # Progress stage 2/2
-          _("Read list of snapshots"),
+          _("Read list of snapshots")
         ],
         [
           # Progress step 1/2
@@ -363,9 +330,7 @@ tool can be used to create configurations."))
       Progress.NextStage
 
       return true
-
     end
-
 
     # Return the given file mode as octal number
     def GetFileMode(file)
@@ -494,13 +459,11 @@ tool can be used to create configurations."))
       ret
     end
 
-
     # convert hash with userdata to a string
     # { "a" => "1", "b" => "2" } -> "a=1, b=2"
     def userdata_to_string(userdata)
       return userdata.map { |k, v| "#{k}=#{v}" }.join(", ")
     end
-
 
     # convert string with userdata to a hash
     # "a=1, b=2" -> { "a" => "1", "b" => "2" }
@@ -509,13 +472,12 @@ tool can be used to create configurations."))
         if s.include?("=")
           s.split("=", 2).map { |t| t.strip }
         else
-          [ s.strip, "" ]
+          [s.strip, ""]
         end
       end.to_h
     end
 
-
-    private
+  private
 
     class Tree
 
@@ -529,7 +491,7 @@ tool can be used to create configurations."))
         @children = []
       end
 
-      def each()
+      def each
         if @parent != nil
           yield self
         end
@@ -540,20 +502,19 @@ tool can be used to create configurations."))
         end
       end
 
-      def fullname()
-        return @parent ? @parent.fullname() + "/" + @name : @name
+      def fullname
+        return @parent ? @parent.fullname + "/" + @name : @name
       end
 
-      def created?()
+      def created?
         return @status & 0x01 != 0
       end
 
-      def deleted?()
+      def deleted?
         return @status & 0x02 != 0
       end
 
-
-      def icon()
+      def icon
         if @status == 0
           return "yast-gray-dot.png"
         elsif created?
@@ -565,11 +526,9 @@ tool can be used to create configurations."))
         end
       end
 
-
       def add(fullname, status)
-
         a, b = fullname.split("/", 2)
-        return add(b, status) if fullname.start_with? "/" #leading /
+        return add(b, status) if fullname.start_with? "/" # leading /
 
         i = @children.index{ |x| x.name == a }
 
@@ -588,14 +547,11 @@ tool can be used to create configurations."))
           end
           @children << subtree
         end
-
       end
 
-
       def find(fullname)
-
         a, b = fullname.split("/", 2)
-        return find(b) if fullname.start_with? "/" #leading /
+        return find(b) if fullname.start_with? "/" # leading /
 
         i = @children.index{ |x| x.name == a }
 
@@ -608,13 +564,11 @@ tool can be used to create configurations."))
         else
           return @children[i].find(b)
         end
-
       end
 
     end
 
-
-    public
+  public
 
     publish :variable => :snapshots, :type => "list <map>"
     publish :variable => :selected_snapshot, :type => "map"
@@ -635,5 +589,4 @@ tool can be used to create configurations."))
 
   Snapper = SnapperClass.new
   Snapper.main
-
 end
