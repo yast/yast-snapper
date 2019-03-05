@@ -7,7 +7,7 @@ Yast.import "Snapper"
 describe Yast::Snapper do
   describe "#userdata_to_string" do
     it "call with empty userdata" do
-      expect(Yast::Snapper.userdata_to_string({ })).to eq("")
+      expect(Yast::Snapper.userdata_to_string({})).to eq("")
     end
 
     it "call with simple userdata" do
@@ -21,7 +21,7 @@ describe Yast::Snapper do
 
   describe "#string_to_userdata" do
     it "call with empty string" do
-      expect(Yast::Snapper.string_to_userdata("")).to eq({ })
+      expect(Yast::Snapper.string_to_userdata("")).to eq({})
     end
 
     it "call with simple string" do

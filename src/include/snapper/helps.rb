@@ -26,7 +26,7 @@
 
 module Yast
   module SnapperHelpsInclude
-    def initialize_snapper_helps(include_target)
+    def initialize_snapper_helps(_include_target)
       textdomain "snapper"
 
       # All helps are here
@@ -64,7 +64,7 @@ module Yast
             "When a file is selected in the tree, you can see the its difference between snapshot version and current system.\n" +
             "</p>\n"
         )
-      } 
+      }
 
       # EOF
     end
