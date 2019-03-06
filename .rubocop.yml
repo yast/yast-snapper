@@ -1,5 +1,6 @@
 
-# use the shared Yast defaults                                                                                                                                                                  
+# use the shared Yast defaults
+
 inherit_from:
   /usr/share/YaST2/data/devtools/data/rubocop_yast_style.yml
 
@@ -79,25 +80,6 @@ Style/AccessorMethodName:
   Exclude:
     - 'src/modules/Snapper.rb'
 
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedHashRocketStyle, EnforcedColonStyle, EnforcedLastArgumentHashStyle, SupportedLastArgumentHashStyles.
-# SupportedLastArgumentHashStyles: always_inspect, always_ignore, ignore_implicit, ignore_explicit
-Style/AlignHash:
-  Exclude:
-    - 'src/include/snapper/helps.rb'
-    - 'src/modules/SnapperDbus.rb'
-
-# Offense count: 19
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: with_first_parameter, with_fixed_indentation
-Style/AlignParameters:
-  Exclude:
-    - 'src/include/snapper/dialogs.rb'
-    - 'src/modules/Snapper.rb'
-    - 'src/modules/SnapperDbus.rb'
-
 # Offense count: 10
 # Cop supports --auto-correct.
 # Configuration parameters: EnforcedStyle, SupportedStyles.
@@ -129,30 +111,12 @@ Style/Documentation:
     - 'src/modules/Snapper.rb'
     - 'src/modules/SnapperDbus.rb'
 
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: empty_lines, no_empty_lines
-Style/EmptyLinesAroundClassBody:
-  Exclude:
-    - 'src/clients/snapper.rb'
-    - 'src/modules/Snapper.rb'
-    - 'src/modules/SnapperDbus.rb'
-
 # Offense count: 2
 # Configuration parameters: ExpectMatchingDefinition, Regex, IgnoreExecutableScripts.
 Style/FileName:
   Exclude:
     - 'src/modules/Snapper.rb'
     - 'src/modules/SnapperDbus.rb'
-
-# Offense count: 4
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: consistent, special_for_inner_method_call, special_for_inner_method_call_in_parentheses
-Style/FirstParameterIndentation:
-  Exclude:
-    - 'src/include/snapper/dialogs.rb'
 
 # Offense count: 3
 # Configuration parameters: EnforcedStyle, SupportedStyles.
@@ -263,15 +227,6 @@ Style/RedundantReturn:
 Style/SelfAssignment:
   Exclude:
     - 'src/include/snapper/dialogs.rb'
-
-# Offense count: 3
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: space, no_space
-Style/SpaceBeforeBlockBraces:
-  Exclude:
-    - 'src/include/snapper/dialogs.rb'
-    - 'src/modules/Snapper.rb'
 
 # Offense count: 1
 # Cop supports --auto-correct.

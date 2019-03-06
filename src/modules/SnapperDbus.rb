@@ -23,7 +23,6 @@ require "dbus"
 
 module Yast
   class SnapperDbusClass < Module
-
     include Yast::Logger
 
     def main
@@ -55,14 +54,14 @@ module Yast
 
       ret = result.map do |snapshot|
         {
-          "num" => snapshot[0],
-          "type" => TYPE_INT_TO_SYMBOL[snapshot[1]],
-          "pre_num" => snapshot[2],
-          "date" => Time.at(snapshot[3]),
-          "uid" => snapshot[4],
+          "num"         => snapshot[0],
+          "type"        => TYPE_INT_TO_SYMBOL[snapshot[1]],
+          "pre_num"     => snapshot[2],
+          "date"        => Time.at(snapshot[3]),
+          "uid"         => snapshot[4],
           "description" => unescape(snapshot[5]),
-          "cleanup" => unescape(snapshot[6]),
-          "userdata" => unescape(snapshot[7])
+          "cleanup"     => unescape(snapshot[6]),
+          "userdata"    => unescape(snapshot[7])
         }
       end
 
@@ -73,7 +72,7 @@ module Yast
 
     def create_single_snapshot(config_name, description, cleanup, userdata)
       result = dbus_object.CreateSingleSnapshot(config_name, escape(description), escape(cleanup),
-                                                 escape(userdata)).first
+        escape(userdata)).first
       log.debug("create_single_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result:#{result}")
 
@@ -82,7 +81,7 @@ module Yast
 
     def create_pre_snapshot(config_name, description, cleanup, userdata)
       result = dbus_object.CreatePreSnapshot(config_name, escape(description), escape(cleanup),
-                                              escape(userdata)).first
+        escape(userdata)).first
       log.debug("create_pre_snapshot config_name:#{config_name} description:#{description} "\
                "cleanup:#{cleanup} userdata:#{userdata} result: #{result}")
 
@@ -91,7 +90,7 @@ module Yast
 
     def create_post_snapshot(config_name, prenum, description, cleanup, userdata)
       result = dbus_object.CreatePostSnapshot(config_name, prenum, escape(description),
-                                               escape(cleanup), escape(userdata)).first
+        escape(cleanup), escape(userdata)).first
       log.debug("create_post_snapshot config_name:#{config_name} prenum:#{prenum} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata}"\
                "result #{result}")
@@ -108,7 +107,7 @@ module Yast
 
     def set_snapshot(config_name, num, description, cleanup, userdata)
       result = dbus_object.SetSnapshot(config_name, num, escape(description), escape(cleanup),
-                                        escape(userdata)).first
+        escape(userdata)).first
       log.debug("set_snapshot config_name:#{config_name} num:#{num} "\
                "description:#{description} cleanup:#{cleanup} userdata:#{userdata} "\
                "result #{result}")
@@ -218,7 +217,6 @@ module Yast
 
       return ret
     end
-
   end
 
   SnapperDbus = SnapperDbusClass.new

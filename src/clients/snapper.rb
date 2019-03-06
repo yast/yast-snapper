@@ -28,7 +28,6 @@
 
 module Yast
   class SnapperClient < Client
-
     include Yast::Logger
 
     def main
@@ -56,7 +55,6 @@ module Yast
 
       deep_copy(ret)
     end
-
   end
 end
 

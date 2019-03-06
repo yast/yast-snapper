@@ -48,7 +48,7 @@ module Yast
           _("<p>Click <b>Refresh</b> to update the list of snapshots. This is only required\n" +
             "if some other program is changing the list of snapshots.</p>"),
         # Show snapshot dialog help
-        "show_pair" => _(
+        "show_pair"   => _(
           "<p><b><big>Snapshot Overview</big></b><p>\n" +
             "<p>\n" +
             "The tree shows all the files that were modified between creating the first ('pre') and second ('post') snapshot. On the right side, you see the description generated when the first snapshot was created and the time of creation for both snapshots.\n" +
