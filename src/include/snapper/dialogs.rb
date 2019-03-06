@@ -491,8 +491,7 @@ module Yast
           # button label
           PushButton(Id(:show), Opt(:default), _("Show Changes")),
           PushButton(Id(:create), Label.CreateButton),
-          # button label
-          PushButton(Id(:modify), _("Modify")),
+          PushButton(Id(:modify), Label.ModifyButton),
           PushButton(Id(:delete), Label.DeleteButton),
           PushButton(Id(:refresh), Label.RefreshButton),
           HStretch()
