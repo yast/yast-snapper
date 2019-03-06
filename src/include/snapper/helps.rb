@@ -43,7 +43,10 @@ module Yast
             "used for storing the file system state in a certain time, while Pre and Post are used to define the changes done by special operation performed between taking those two snapshots. Pre and Post snapshots are paired together in the table.</p>\n" +
             "<p>Select a snapshot or snapshot pair and click <b>Show Changes</b> to see the\n" +
             "new file system changes in the specified snapshot.</p>\n"
-        ),
+        ) +
+          # Summary dialog help:
+          _("<p>Click <b>Refresh</b> to update the list of snapshots. This is only required\n" +
+            "if some other program is changing the list of snapshots.</p>"),
         # Show snapshot dialog help
         "show_pair" => _(
           "<p><b><big>Snapshot Overview</big></b><p>\n" +

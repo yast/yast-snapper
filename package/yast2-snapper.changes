@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Mar 06 22:06:46 CET 2019 - aschnell@suse.com
+
+- added button to refresh list of snapshots
+  (gh#yast/yast-yast2#713)
+- 4.1.2
+
+-------------------------------------------------------------------
 Tue Mar 05 17:58:48 CET 2019 - aschnell@suse.com
 
 - enable rubocop

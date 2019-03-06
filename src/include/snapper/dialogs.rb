@@ -494,6 +494,7 @@ module Yast
           # button label
           PushButton(Id(:modify), _("Modify")),
           PushButton(Id(:delete), Label.DeleteButton),
+          PushButton(Id(:refresh), Label.RefreshButton),
           HStretch()
         )
       )
@@ -570,6 +571,11 @@ module Yast
             update_snapshots.call
             next
           end
+
+        elsif ret == :refresh
+
+          update_snapshots.call
+          next
 
         elsif ret == :next
           break
