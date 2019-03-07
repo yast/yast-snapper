@@ -491,9 +491,9 @@ module Yast
           # button label
           PushButton(Id(:show), Opt(:default), _("Show Changes")),
           PushButton(Id(:create), Label.CreateButton),
-          # button label
-          PushButton(Id(:modify), _("Modify")),
+          PushButton(Id(:modify), Label.ModifyButton),
           PushButton(Id(:delete), Label.DeleteButton),
+          PushButton(Id(:refresh), Label.RefreshButton),
           HStretch()
         )
       )
@@ -571,6 +571,11 @@ module Yast
             next
           end
 
+        elsif ret == :refresh
+
+          update_snapshots.call
+          next
+
         elsif ret == :next
           break
 
@@ -587,7 +592,7 @@ module Yast
     def generate_ui_file_tree(subtree)
       return subtree.children.map do |file|
         Item(Id(file.fullname), term(:icon, file.icon), file.name, false,
-             generate_ui_file_tree(file))
+          generate_ui_file_tree(file))
       end
     end
 
@@ -1104,16 +1109,16 @@ module Yast
             current_file.created?
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to delete the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename)
-              )
+            Builtins.sformat(
+              _(
+                "Do you want to delete the file\n" +
+                  "\n" +
+                  "%1\n" +
+                  "\n" +
+                  "from current system?"
+              ),
+              Snapper.GetFileFullPath(current_filename)
+            )
           )
             Snapper.RestoreFiles(
               ret == :restore_pre ? pre_num : snapshot_num,
@@ -1125,17 +1130,17 @@ module Yast
         elsif ret == :restore_pre
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to copy the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from snapshot '%2' to current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename),
-                pre_num
-              )
+            Builtins.sformat(
+              _(
+                "Do you want to copy the file\n" +
+                  "\n" +
+                  "%1\n" +
+                  "\n" +
+                  "from snapshot '%2' to current system?"
+              ),
+              Snapper.GetFileFullPath(current_filename),
+              pre_num
+            )
           )
             Snapper.RestoreFiles(pre_num, [current_filename])
           end
@@ -1144,17 +1149,17 @@ module Yast
         elsif ret == :restore
           # yes/no question, %1 is file name, %2 is number
           if Popup.YesNo(
-              Builtins.sformat(
-                _(
-                  "Do you want to copy the file\n" +
-                    "\n" +
-                    "%1\n" +
-                    "\n" +
-                    "from snapshot '%2' to current system?"
-                ),
-                Snapper.GetFileFullPath(current_filename),
-                from
-              )
+            Builtins.sformat(
+              _(
+                "Do you want to copy the file\n" +
+                  "\n" +
+                  "%1\n" +
+                  "\n" +
+                  "from snapshot '%2' to current system?"
+              ),
+              Snapper.GetFileFullPath(current_filename),
+              from
+            )
           )
             Snapper.RestoreFiles(from, [current_filename])
           end
@@ -1163,7 +1168,7 @@ module Yast
         elsif ret == :next
 
           filenames = UI.QueryWidget(Id(:tree), :SelectedItems)
-          filenames.map!{ |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
+          filenames.map! { |filename| filename.force_encoding(Encoding::ASCII_8BIT) }
 
           # remove filenames not changed between the snapshots, e.g. /foo if
           # only /foo/bar changed
@@ -1180,26 +1185,26 @@ module Yast
           end
 
           if Popup.AnyQuestionRichText(
-              # popup headline
-              _("Restoring files"),
-              # popup message, %1 is snapshot number, %2 list of files
-              Builtins.sformat(
-                _(
-                  "<p>These files will be restored from snapshot '%1':</p>\n" +
-                    "<p>\n" +
-                    "%2\n" +
-                    "</p>\n" +
-                    "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
-                    "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
-                ),
-                from,
-                to_restore.join("<br>")
+            # popup headline
+            _("Restoring files"),
+            # popup message, %1 is snapshot number, %2 list of files
+            Builtins.sformat(
+              _(
+                "<p>These files will be restored from snapshot '%1':</p>\n" +
+                  "<p>\n" +
+                  "%2\n" +
+                  "</p>\n" +
+                  "<p>Files existing in original snapshot will be copied to current system.</p>\n" +
+                  "<p>Files that did not exist in the snapshot will be deleted.</p>Are you sure?"
               ),
-              60,
-              20,
-              Label.YesButton,
-              Label.NoButton,
-              :focus_no
+              from,
+              to_restore.join("<br>")
+            ),
+            60,
+            20,
+            Label.YesButton,
+            Label.NoButton,
+            :focus_no
           )
             Snapper.RestoreFiles(from, filenames)
             break

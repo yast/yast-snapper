@@ -17,7 +17,7 @@
 
 
 Name:           yast2-snapper
-Version:        4.1.1
+Version:        4.1.2
 Release:        0
 Group:		System/YaST
 
@@ -31,12 +31,12 @@ License:        GPL-2.0-only
 
 BuildRequires:  doxygen
 BuildRequires:  update-desktop-files
-BuildRequires:  yast2
+BuildRequires:  yast2 >= 4.1.60
 BuildRequires:  yast2-devtools >= 3.1.10
 BuildRequires:  rubygem(%{rb_default_ruby_abi}:rspec)
 BuildRequires:  rubygem(%{rb_default_ruby_abi}:ruby-dbus)
 Requires:       snapper
-Requires:       yast2 >= 2.21.22
+Requires:       yast2 >= 4.1.60
 Requires:       yast2-ruby-bindings >= 1.0.0
 Requires:       rubygem(%{rb_default_ruby_abi}:ruby-dbus)
 Supplements:    packageand(snapper:yast2)

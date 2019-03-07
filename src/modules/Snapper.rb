@@ -30,7 +30,6 @@ require "yast"
 
 module Yast
   class SnapperClass < Module
-
     include Yast::Logger
 
     attr_reader :current_config
@@ -236,13 +235,13 @@ module Yast
       case args["type"]
       when "single"
         SnapperDbus.create_single_snapshot(@current_config, args["description"], args["cleanup"],
-                                           args["userdata"])
+          args["userdata"])
       when "pre"
         SnapperDbus.create_pre_snapshot(@current_config, args["description"], args["cleanup"],
-                                        args["userdata"])
+          args["userdata"])
       when "post"
         SnapperDbus.create_post_snapshot(@current_config, args["pre"], args["description"],
-                                         args["cleanup"], args["userdata"])
+          args["cleanup"], args["userdata"])
       end
 
       return true
@@ -256,7 +255,7 @@ module Yast
     # Return true on success
     def ModifySnapshot(args)
       SnapperDbus.set_snapshot(@current_config, args["num"], args["description"], args["cleanup"],
-                               args["userdata"])
+        args["userdata"])
 
       return true
 
@@ -480,7 +479,6 @@ tool can be used to create configurations."))
   private
 
     class Tree
-
       attr_accessor :name, :status
       attr_reader :children
 
@@ -530,7 +528,7 @@ tool can be used to create configurations."))
         a, b = fullname.split("/", 2)
         return add(b, status) if fullname.start_with? "/" # leading /
 
-        i = @children.index{ |x| x.name == a }
+        i = @children.index { |x| x.name == a }
 
         if i
           if b
@@ -553,7 +551,7 @@ tool can be used to create configurations."))
         a, b = fullname.split("/", 2)
         return find(b) if fullname.start_with? "/" # leading /
 
-        i = @children.index{ |x| x.name == a }
+        i = @children.index { |x| x.name == a }
 
         if !i
           return nil
@@ -565,7 +563,6 @@ tool can be used to create configurations."))
           return @children[i].find(b)
         end
       end
-
     end
 
   public
@@ -584,7 +581,6 @@ tool can be used to create configurations."))
     publish :function => :CreateSnapshot, :type => "boolean (map)"
     publish :function => :Init, :type => "boolean ()"
     publish :function => :RestoreFiles, :type => "boolean (integer, list <string>)"
-
   end
 
   Snapper = SnapperClass.new
