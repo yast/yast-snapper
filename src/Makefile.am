@@ -14,7 +14,7 @@ ynclude_DATA = \
   include/snapper/helps.rb
 
 desktop_DATA = \
-  desktop/snapper.desktop
+  desktop/org.openSUSE.YaST.Snapper.desktop
 
 scalabledir = @icondir@/hicolor/scalable/apps
 scalable_DATA = \

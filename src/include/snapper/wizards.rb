@@ -69,7 +69,7 @@ module Yast
       }
 
       Wizard.CreateDialog
-      Wizard.SetDesktopTitleAndIcon("snapper")
+      Wizard.SetDesktopTitleAndIcon("org.openSUSE.YaST.Snapper")
       ret = Sequencer.Run(aliases, sequence)
 
       UI.CloseDialog
