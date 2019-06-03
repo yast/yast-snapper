@@ -33,7 +33,7 @@ Requires:       rubygem(%{rb_default_ruby_abi}:ruby-dbus)
 BuildRequires:  doxygen
 BuildRequires:  update-desktop-files
 BuildRequires:  yast2 >= 4.1.60
-BuildRequires:  yast2-devtools >= 3.1.10
+BuildRequires:  yast2-devtools >= 4.2.2
 BuildRequires:  rubygem(%{rb_default_ruby_abi}:rspec)
 BuildRequires:  rubygem(%{rb_default_ruby_abi}:ruby-dbus)
 
