@@ -18,6 +18,7 @@ X-SuSE-YaST-Keywords=disk,backup,restore
 Icon=yast-snapper
 Exec=/usr/bin/xdg-su -c '/sbin/yast2 snapper'
 
-Name=Filesystem Snapshots
-GenericName=Manage Btrfs / LVM filesystem snapshots
+Name=YaST Filesystem Snapshots
+GenericName=Filesystem Snapshots
+Comment=Manage Btrfs / LVM filesystem snapshots
 StartupNotify=true
