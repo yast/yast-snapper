@@ -15,9 +15,6 @@ jobs:
     - name: Git Checkout
       uses: actions/checkout@v2
 
-    - name: Install Dependencies
-      run: zypper --non-interactive install "rubygem($RUBY_VERSION:ruby-dbus)"
-
     # just for easier debugging...
     - name: Inspect Installed Packages
       run: rpm -qa | sort
