@@ -1,7 +1,7 @@
 #
 # spec file for package yast2-snapper
 #
-# Copyright (c) 2015 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2021 SUSE LLC
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,30 +15,26 @@
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
+
 Name:           yast2-snapper
-Version:        4.4.0
+Version:        4.4.1
 Release:        0
-Group:          System/YaST
 Summary:        YaST - file system snapshots review
-Url:            https://github.com/yast/yast-snapper/
 License:        GPL-2.0-only
-
+Group:          System/YaST
+URL:            https://github.com/yast/yast-snapper/
 Source0:        %{name}-%{version}.tar.bz2
-
+BuildRequires:  doxygen
+BuildRequires:  update-desktop-files
+BuildRequires:  yast2 >= 4.1.60
+BuildRequires:  yast2-devtools >= 4.4.0
+BuildRequires:  rubygem(%{rb_default_ruby_abi}:rspec)
+BuildRequires:  rubygem(%{rb_default_ruby_abi}:ruby-dbus)
 Requires:       snapper
 Requires:       yast2 >= 4.1.60
 Requires:       yast2-ruby-bindings >= 1.0.0
 Requires:       rubygem(%{rb_default_ruby_abi}:ruby-dbus)
-
-BuildRequires:  doxygen
-BuildRequires:  update-desktop-files
-BuildRequires:  yast2 >= 4.1.60
-BuildRequires:  yast2-devtools >= 4.2.2
-BuildRequires:  rubygem(%{rb_default_ruby_abi}:rspec)
-BuildRequires:  rubygem(%{rb_default_ruby_abi}:ruby-dbus)
-
 Supplements:    (snapper and yast2)
-
 # change to noarch causes problems according to behlert
 # BuildArch:      noarch
 
@@ -56,11 +52,12 @@ YaST module for accessing and managing file-system snapshots
 %yast_metainfo
 
 %files
+%license COPYING
 %{yast_yncludedir}
 %{yast_clientdir}
 %{yast_moduledir}
 %{yast_desktopdir}
 %{yast_metainfodir}
 %{yast_icondir}
-%doc %{yast_docdir}
-%license COPYING
+
+%changelog
