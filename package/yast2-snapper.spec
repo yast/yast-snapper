@@ -16,7 +16,7 @@
 #
 
 Name:           yast2-snapper
-Version:        4.2.0
+Version:        4.4.0
 Release:        0
 Group:          System/YaST
 Summary:        YaST - file system snapshots review
