@@ -149,7 +149,7 @@ module Yast
         # the file diff
         elsif Ops.get(out, "stdout") != ""
           status = ["diff"]
-          ret["diff"] = out["stdout"].encode(Encoding::UTF_8, { :invalid => :replace })
+          ret["diff"] = out["stdout"].encode(Encoding::UTF_8, :invalid => :replace)
         end
 
         # check mode and ownerships
