@@ -93,7 +93,7 @@ module Yast
       return SnapperDbus.get_config(@current_config)
 
     rescue Exception => e
-      Report.Error(_("Failed to get config:" + "\n" + e.message))
+      Report.Error(_("Failed to get config:") + "\n" + e.message)
       return {}
     end
 
@@ -110,7 +110,7 @@ module Yast
       return SnapperDbus.get_mount_point(@current_config, snapshot_num)
 
     rescue Exception => e
-      Report.Error(_("Failed to get snapshot mount point:" + "\n" + e.message))
+      Report.Error(_("Failed to get snapshot mount point:") + "\n" + e.message)
       return ""
     end
 
@@ -247,7 +247,7 @@ module Yast
       return true
 
     rescue Exception => e
-      Report.Error(_("Failed to create new snapshot:" + "\n" + e.message))
+      Report.Error(_("Failed to create new snapshot:") + "\n" + e.message)
       return false
     end
 
@@ -260,7 +260,7 @@ module Yast
       return true
 
     rescue Exception => e
-      Report.Error(_("Failed to modify snapshot:" + "\n" + e.message))
+      Report.Error(_("Failed to modify snapshot:") + "\n" + e.message)
       return false
     end
 
@@ -272,7 +272,7 @@ module Yast
       return true
 
     rescue Exception => e
-      Report.Error(_("Failed to delete snapshot:" + "\n" + e.message))
+      Report.Error(_("Failed to delete snapshot:") + "\n" + e.message)
       return false
     end
 
